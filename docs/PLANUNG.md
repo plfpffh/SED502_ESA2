@@ -6,7 +6,7 @@ Abgabe **Sa, 05.12.2026, 23:59** im Online-Campus · Gruppe melden bis **Mi, 25.
 | Rolle | Name | Schwerpunkt |
 |---|---|---|
 | Person A | plfpffh | Salzburg, Seenliste, App-Rahmen, KI-Technik |
-| Person B | _(Name)_ | Oberösterreich, Klimatrend, Seedetail, KI-Berater |
+| Person B | cchhrriiss | Oberösterreich, Klimatrend, Seedetail, KI-Berater |
 
 Repository: <https://github.com/plfpffh/SED502_ESA2> · Diese Datei ist die verbindliche Planung. Änderungen daran laufen wie Code über einen Pull Request.
 
@@ -173,6 +173,10 @@ export interface Klimakennzahlen {
 export function zuSeeMessungen(roh: unknown, seen: See[]): SeeMessung[];
 //   wirft einen Error mit verständlicher Meldung, wenn das Format nicht passt
 
+// src/utils/fetchJSON.ts (A) – generischer Wrapper nach Kompendium Modul 03, Abschnitt 4.4
+export async function fetchJSON<T>(url: string, optionen?: RequestInit): Promise<T>;
+//   prüft antwort.ok und wirft bei HTTP-Fehlern einen Error mit Statuscode; von useFetch und den Adaptern genutzt
+
 // src/hooks/useFetch.ts (A)
 export function useFetch<T>(url: string): { daten: T | null; isLaden: boolean; fehler: string | null; neuLaden: () => void };
 
@@ -198,6 +202,15 @@ export interface Nachricht {
   content: string;
 }
 //   Beim Senden an die API nur { role, content } übertragen, die id bleibt in der App.
+
+// src/utils/aiStream.ts (A) – Stream lesen wie Kompendium Modul 05, Abschnitt 3.2, aber von /api/ki statt direkt vom Anbieter
+export async function chatStream(
+  nachrichten: Nachricht[],
+  onChunk: (text: string) => void,
+  onFertig: () => void,
+  onFehler: (fehler: Error) => void,
+  signal?: AbortSignal,          // für „Abbrechen“
+): Promise<void>;
 
 // src/hooks/useAI.ts (A) – Schnittstelle wie Kompendium Modul 05, Abschnitt 4.1
 export function useAI(optionen?: { systemPrompt?: string; maxNachrichten?: number }): {
@@ -267,7 +280,8 @@ Jede Person übernimmt **einen vertikalen Strang**: Proxy → Adapter → Hook �
 - ✅ Repository angelegt (`plfpffh/SED502_ESA2`)
 - ✅ Vite + React + TypeScript + ESLint, `.gitignore` inkl. `.env` und `.vercel` (Commit `7492370`)
 - ✅ Stammdaten, Datenmodell und Filterlogik aus ESA 1 unverändert übernommen (Commit `80e5646`)
-- ☐ B als Collaborator einladen, `main` schützen (Merge nur per Pull Request)
+- ✅ B (`cchhrriiss`) als Collaborator eingeladen
+- ☐ `main` schützen (Merge nur per Pull Request, 1 Review durch die andere Person)
 - ☐ React Router, `vercel.json` (SPA-Rewrite), `.env.example`
 - ☐ `App.tsx` (Routen), `komponenten/Navigation.tsx`, `seiten/NichtGefunden.tsx`
 - ☐ `daten/seen.ts` umbauen: Messwerte raus, Stationen und lat/lng rein; `typen/messung.ts` anlegen (Abschnitt 5)
@@ -275,16 +289,18 @@ Jede Person übernimmt **einen vertikalen Strang**: Proxy → Adapter → Hook �
 **Salzburg-Strang**
 - `api/hydris-salzburg.ts` – Proxy, liefert nur Seen-Stationen
 - `src/datenquellen/hydrisSalzburg.ts` – Adapter → `SeeMessung[]`
+- `src/utils/fetchJSON.ts` – generischer Wrapper mit Prüfung auf `antwort.ok` (Modul 03), Grundlage für `useFetch` und alle Adapter
 - `src/hooks/useFetch.ts` – generischer Hook mit loading/success/error
 - `src/hooks/useSeeMessungen.ts` – führt Salzburg + OÖ zusammen (nutzt den Adapter von B)
 
 **Seiten und Komponenten**
 - `seiten/Seenliste.tsx` (`/seen`) – Liste, Filter, Sortierung, Kennzahlen; Umschalter „Baden / Eissport“ (Abschnitt 5): Baden wie in ESA 1 (Regler 0–30 °C plus Checkbox „alle“), Eissport mit Auswahl der Kältetage; `filtereSeen()` in `utils/seen.ts` um den Eissport-Filter und die Sortierung „Kälteserie“ erweitern
-- `komponenten/SeeKarte.tsx`, `SeenFilter.tsx`, `LadeAnimation.tsx`, `FehlerMeldung.tsx`
+- `komponenten/SeeKarte.tsx` (Karte **eines** Sees), `SeenFilter.tsx`, `Ladeanimation.tsx`, `FehlerMeldung.tsx`
 
 **KI-Technik**
 - `api/ki.ts` – LLM-Aufruf mit Streaming, Key nur hier
-- `src/hooks/useAI.ts` – liest den Stream, liefert Text schrittweise
+- `src/utils/aiStream.ts` – `chatStream()` liest den Stream von `/api/ki` Chunk für Chunk (Modul 05, Abschnitt 3.2)
+- `src/hooks/useAI.ts` – verwaltet Verlauf, Streaming-Zustand und Fehler, nutzt `chatStream()`
 
 ### Person B – Oberösterreich, Klimatrend, Seedetail, KI-Berater
 
@@ -301,7 +317,7 @@ Jede Person übernimmt **einen vertikalen Strang**: Proxy → Adapter → Hook �
 **Seiten**
 - `seiten/SeeDetail.tsx` (`/seen/:id`) – Live-Temperatur aller Messstellen, Klimatrend, KI-Einschätzung; fehlt ein Wert, „Wert aktuell nicht vorhanden“ anzeigen (Regel in Abschnitt 5). Die KI bekommt in diesem Fall ausdrücklich mitgeteilt, dass kein Messwert vorliegt
 - `seiten/KiBerater.tsx` (`/berater`) + `komponenten/KiAntwort.tsx` – „Wohin am Wochenende?“ (nutzt `useAI` von A)
-- `seiten/Startseite.tsx` (`/`) – Kurzüberblick; Landkarte (`komponenten/SeenKarte.tsx`, react-leaflet) ist optional und kann nach ESA 3 wandern
+- `seiten/Startseite.tsx` (`/`) – Kurzüberblick; Landkarte (`komponenten/Landkarte.tsx`, react-leaflet; bewusst nicht `SeenKarte`, um Verwechslung mit `SeeKarte` zu vermeiden) ist optional und kann nach ESA 3 wandern
 
 ### Gemeinsam
 - Vertrag aus Abschnitt 5 am Kick-off

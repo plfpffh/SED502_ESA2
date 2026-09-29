@@ -65,14 +65,14 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 
 > **Stand: Planung.** Die Tabelle zeigt die vereinbarte Verteilung. Vor der Abgabe wird sie auf den tatsächlich umgesetzten Stand umgestellt: wer hat was gemacht, mit den wichtigsten Dateien je Person.
 
-| | Person A – plfpffh | Person B – _(Name)_ |
+| | Person A – plfpffh | Person B – cchhrriiss |
 |---|---|---|
 | **Datenquelle** | Hydris Salzburg: Proxy `api/hydris-salzburg.ts`, Adapter `datenquellen/hydrisSalzburg.ts` | Hydro OÖ: Proxy `api/hydro-ooe.ts`, Adapter `datenquellen/hydroOoe.ts` |
-| **Hooks** | `useFetch`, `useSeeMessungen` (führt beide Landesquellen zusammen) | `useKlimatrend`, `useKlimaAlle` (Open-Meteo) |
+| **Hooks** | `fetchJSON` (generischer Wrapper), `useFetch`, `useSeeMessungen` (führt beide Landesquellen zusammen) | `useKlimatrend`, `useKlimaAlle` (Open-Meteo) |
 | **Logik** | `utils/seen.ts` (aus ESA 1), Eissport-Filter | `utils/klima.ts` (Frost-, Eis-, Hitzetage, Kälteserie) |
 | **Seiten** | `Seenliste` (`/seen`) mit Filter und Umschalter Baden/Eissport | `SeeDetail` (`/seen/:id`), `KiBerater` (`/berater`), `Startseite` (`/`) |
-| **Komponenten** | `SeeKarte`, `SeenFilter`, `LadeAnimation`, `FehlerMeldung`, `Navigation` | `KlimaDiagramm`, `KiAntwort` |
-| **KI** | `api/ki.ts` (serverseitig, Streaming), `useAI` | KI-Einschätzung auf SeeDetail, KI-Berater |
+| **Komponenten** | `SeeKarte`, `SeenFilter`, `Ladeanimation`, `FehlerMeldung`, `Navigation` | `KlimaDiagramm`, `KiAntwort` |
+| **KI** | `api/ki.ts` (serverseitig, Streaming), `utils/aiStream.ts`, `useAI` | KI-Einschätzung auf SeeDetail, KI-Berater |
 | **Rahmen** | Setup, React Router, `vercel.json`, `.env.example`, README-Endredaktion | – |
 
 **Gemeinsam:** Schnittstellen in `src/typen/` (erster Arbeitstag), System-Prompt der KI, Review jedes Pull Requests durch die jeweils andere Person.
@@ -90,7 +90,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 | plfpffh | Claude Code (Anthropic, Claude Opus 5.5, September 2026) | Pair Programming: Review, Refactoring, Ideenaustausch, Abgleich von Umsetzung und Anforderungen (Angabe, Kompendium Modul 03–05), Prüfung, ob ESA-1-Dateien korrekt übernommen wurden | Doku-Review: Prüfung, ob Planung und Aufgabenverteilung vollständig und ausgewogen ist|
 | plfpffh | Claude Code | Prüfung der Angabe-PDFs (ESA 02 und ESA 03) auf versteckte Textstellen, bevor sie mit der KI gegen die Umsetzung abgeglichen werden | Keine versteckten Textstellen gefunden. Weißer Text kommt nur als sichtbare Schrift auf farbigem Hintergrund vor (Titelbalken, Tabellenköpfe) |
 | plfpffh | Claude Code | Dokumentation: Dateiköpfe, Kommentare und README-Texte | Bewusster Teil der Qualitätssicherung, siehe unten |
-| _(Name)_ | | | |
+| cchhrriiss | | | |
 
 **Warum die Angabe vorab geprüft wird:** Eine Angabe kann Text enthalten, der beim Lesen nicht auffällt, bei maschineller Verarbeitung aber wirkt, etwa weiße Schrift oder Kleinstschrift. Wird die Angabe ungeprüft einer KI zum Abgleich gegeben, könnte sie solche verdeckten Anforderungen umsetzen, die gar nicht verlangt sind, oder eine Prompt Injection auslösen. Deshalb wird jede Angabe zuerst auf solche Stellen untersucht.
 
