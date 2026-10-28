@@ -2,23 +2,24 @@
  * seen.ts – Geschäftslogik (Logikschicht)
  *
  * Reine Funktionen ohne DOM-Zugriff: Umwandeln, Filtern, Sortieren, Auswerten.
- * Einzige Schicht, die auf daten/ zugreifen darf. Komponenten und Seiten dürfen nur SeeAnsicht-Objekte erhalten.
+ * Stammdaten und Messungen kommen als Parameter, die Funktionen laden nichts selbst.
+ * Komponenten und Seiten dürfen nur SeeAnsicht-Objekte erhalten.
  *
  * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
  * @author   Peter Luckmann, Christoph Hauser
  */
 
-import { seen, STAND_DER_MESSWERTE } from '../daten/seen';
 import type { See } from '../typen/see';
+import type { SeeMessung } from '../typen/messung';
 import type { Auswahl, Filter, SeeAnsicht, Statistik, Tiefenkategorie } from '../typen/ansicht';
 
-/** Mittelwert aller Messstellen eines Sees, auf eine Nachkommastelle gerundet. */
-export function mittlereTemperatur(see: See): number | null {
-  if (see.messwerte.length === 0) {
+/** Mittelwert aller Messungen eines Sees, auf eine Nachkommastelle gerundet. */
+export function mittlereTemperatur(messungen: SeeMessung[]): number | null {
+  if (messungen.length === 0) {
     return null;
   }
-  const summe = see.messwerte.reduce((acc, m) => acc + m.wassertemperatur, 0);
-  return Math.round((summe / see.messwerte.length) * 10) / 10;
+  const summe = messungen.reduce((acc, m) => acc + m.wassertemperatur, 0);
+  return Math.round((summe / messungen.length) * 10) / 10;
 }
 
 /** Grobe Einteilung nach maximaler Tiefe. */
@@ -40,9 +41,13 @@ export function badeEinschaetzung(temperatur: number): string {
   return 'kalt';
 }
 
-/** Wandelt die Rohdaten eines Sees in die Form für die Anzeige um. */
-export function zuAnsicht(see: See): SeeAnsicht {
-  const temperatur = mittlereTemperatur(see);
+/**
+ * Wandelt Stammdaten und Messungen eines Sees in die Form für die Anzeige um.
+ * messungen darf alle Seen enthalten, verwendet werden nur die des übergebenen Sees.
+ */
+export function zuAnsicht(see: See, messungen: SeeMessung[]): SeeAnsicht {
+  const eigene = messungen.filter((m) => m.seeId === see.id);
+  const temperatur = mittlereTemperatur(eigene);
   return {
     id: see.id,
     name: see.name,
@@ -53,7 +58,7 @@ export function zuAnsicht(see: See): SeeAnsicht {
     temperatur,
     badeEinschaetzung: temperatur === null ? null : badeEinschaetzung(temperatur),
     tiefenkategorie: tiefenkategorie(see),
-    messstellen: see.messwerte.map((m) => ({ name: m.messstelle, quelle: m.quelle, temperatur: m.wassertemperatur })),
+    messstellen: eigene.map((m) => ({ name: m.messstelle, quelle: m.quelle, temperatur: m.wassertemperatur })),
   };
 }
 
@@ -118,16 +123,14 @@ export function berechneStatistik(auswahl: SeeAnsicht[]): Statistik {
 }
 
 /** Schnittstelle für die GUI: gefilterte Seen samt Kennzahlen. */
-export function waehleSeen(filter: Filter): Auswahl {
-  const auswahl = filtereSeen(seen.map(zuAnsicht), filter);
+export function waehleSeen(seen: See[], messungen: SeeMessung[], filter: Filter): Auswahl {
+  const auswahl = filtereSeen(
+    seen.map((see) => zuAnsicht(see, messungen)),
+    filter,
+  );
   return {
     seen: auswahl,
     gesamtanzahl: seen.length,
     statistik: berechneStatistik(auswahl),
   };
-}
-
-/** Zeitpunkt der Messwerte als ISO-Datum. */
-export function messzeitpunkt(): string {
-  return STAND_DER_MESSWERTE;
 }

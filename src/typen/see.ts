@@ -1,8 +1,8 @@
 /**
  * see.ts – Datenmodell der Datenschicht
  *
- * Beschreibt die Rohdaten, so wie sie gespeichert bzw. geladen werden.
- * Darf nur von daten/ und utils/ verwendet werden, nie direkt von Komponenten oder Seiten.
+ * Beschreibt die Stammdaten der Seen und ihre Messstellen.
+ * Darf nur von daten/, datenquellen/ und utils/ verwendet werden, nie direkt von Komponenten oder Seiten.
  *
  * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
  * @author   Peter Luckmann, Christoph Hauser
@@ -12,15 +12,14 @@ export type Bundesland = 'Salzburg' | 'Oberösterreich';
 
 export type Datenquelle = 'Hydris Salzburg' | 'Hydrographischer Dienst OÖ';
 
-/** Ein einzelner Messwert einer Messstelle am See. */
-export interface Messwert {
-  messstelle: string;
+/** Eine Messstelle am See, über die Nummer der jeweiligen Datenquelle zugeordnet. */
+export interface Station {
   quelle: Datenquelle;
-  wassertemperatur: number; // °C
-  zeitpunkt: string; // ISO-Datum, z.B. '2026-09-25T18:00'
+  nummer: string; // Hydris: number, OÖ: station_no
+  messstelle: string; // z.B. 'Kammer'
 }
 
-/** Stammdaten eines Sees inkl. Momentaufnahme der Wassertemperatur. */
+/** Stammdaten eines Sees. Messwerte kommen live über die Datenquellen (siehe typen/messung.ts). */
 export interface See {
   id: string;
   name: string;
@@ -28,5 +27,7 @@ export interface See {
   flaecheKm2: number;
   maxTiefeM: number;
   seehoeheM: number;
-  messwerte: Messwert[];
+  lat: number; // WGS84, Seemitte
+  lng: number;
+  stationen: Station[];
 }
