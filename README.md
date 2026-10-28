@@ -23,7 +23,7 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 | React 19, TypeScript 6, Vite 8 | Grundgerüst der App | ✅ |
 | ESLint mit `react-hooks` | prüft u. a. vollständige Abhängigkeits-Arrays von `useEffect` | ✅ |
 | React Router | Navigation zwischen den Seiten | geplant |
-| Vercel Serverless Functions | Proxy für die Landesdaten, geschützter LLM-Aufruf | geplant |
+| Vercel Serverless Functions | Proxy für die Landesdaten, geschützter LLM-Aufruf | OÖ-Proxy implementiert. Die übrigen Funktionen und Deployment geplant |
 | Recharts | Diagramm der Frosttage pro Winter | geplant |
 
 ## APIs und Datenquellen
@@ -31,13 +31,15 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 | Quelle | Inhalt | Zugriff |
 |---|---|---|
 | [Hydris Salzburg](https://www.salzburg.gv.at/wasser/hydro/) | Wassertemperatur der Salzburger Seen | über `/api`-Proxy (kein CORS) – geplant |
-| [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | über `/api`-Proxy (kein CORS) – geplant |
+| [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | `/api/hydro-ooe` implementiert, Adapter und React-Anbindung geplant |
 | [Open-Meteo Historical Weather](https://open-meteo.com/) | Tageswerte der Lufttemperatur seit 1940 → Frost-, Eis- und Hitzetage | direkt – geplant |
 | Open-Meteo Forecast | Lufttemperatur-Prognose für 7 Tage | direkt – geplant |
 | LLM-API (Google Gemini oder Anthropic Claude Haiku 4.5, Wahl offen) | Einschätzung und Empfehlung, gestreamt | nur serverseitig über `/api/ki` – geplant |
 | Deutschsprachige Wikipedia | Fläche, Tiefe, Seehöhe (Stammdaten aus ESA 1) | statisch |
 
 Hydris und der Hydrographische Dienst OÖ sind **keine offiziell dokumentierten APIs**. Das Format kann sich jederzeit ändern. Die App fängt Fehler dieser Quellen ab. Fällt eine Quelle aus, zeigt die andere weiterhin Werte, und betroffene Seen erscheinen mit „Wert aktuell nicht vorhanden“ am Ende der Liste, statt ausgeblendet zu werden.
+
+OÖ-Quelle: <https://hydro.ooe.gv.at/daten/internet/layers/5/index.json>, geprüft am **11.10.2026**. Der Proxy benötigt keinen API-Schlüssel.
 
 ## Installation
 
@@ -46,13 +48,19 @@ npm install
 npm run dev        # nur Frontend, http://localhost:5173
 npm run build      # TypeScript-Prüfung + Produktions-Build
 npm run lint       # ESLint
+npm test           # OÖ-Proxy testen
 ```
 
-Sobald die `/api`-Funktionen vorhanden sind (*geplant*):
+Nach Einrichtung des Vercel-Projekts durch Person A laufen Frontend und `/api`-Funktionen gemeinsam mit:
 
 ```bash
-cp .env.example .env    # API-Key eintragen, .env wird nie committet
-npx vercel dev          # Frontend und /api-Funktionen gemeinsam
+npx vercel dev
+```
+
+Für die KI-Anbindung, sobald Person A die `.env.example` ergänzt hat (*geplant*):
+
+```bash
+cp .env.example .env    # API-Key in .env eintragen, .env wird nie committet
 ```
 
 ## Sicherheit: Warum der API-Key nicht im Browser liegt
@@ -87,6 +95,8 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 
 **Bereits erledigt (Person A):** Projekt-Setup mit Vite, React, TypeScript und ESLint (Commit `7492370`) · Übernahme von Stammdaten, Datenmodell und Filterlogik aus ESA 1 (Commit `80e5646`).
 
+**Implementiert (Person B):** OÖ-Proxy `api/hydro-ooe.ts` und Tests. Die übrigen B-Aufgaben bleiben geplant.
+
 ## Einsatz von AI-Tools
 
 *Wird während der Entwicklung laufend ergänzt. Jede Person dokumentiert ihren eigenen Einsatz.*
@@ -98,7 +108,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 | plfpffh | Claude Code (Anthropic, Claude Opus 5.5, September 2026) | Pair Programming: Review, Refactoring, Ideenaustausch, Abgleich von Umsetzung und Anforderungen (Angabe, Kompendium Modul 03–05), Prüfung, ob ESA-1-Dateien korrekt übernommen wurden | Doku-Review: Prüfung, ob Planung und Aufgabenverteilung vollständig und ausgewogen ist|
 | plfpffh | Claude Code | Prüfung der Angabe-PDFs (ESA 02 und ESA 03) auf versteckte Textstellen, bevor sie mit der KI gegen die Umsetzung abgeglichen werden | Keine versteckten Textstellen gefunden. Weißer Text kommt nur als sichtbare Schrift auf farbigem Hintergrund vor (Titelbalken, Tabellenköpfe) |
 | plfpffh | Claude Code | Dokumentation: Dateiköpfe, Kommentare und README-Texte | Bewusster Teil der Qualitätssicherung, siehe unten |
-| cchhrriiss | | | |
+| cchhrriiss | Codex (OpenAI, GPT-6.1 Sol, Oktober 2026) | Pair Programming (Review, Refactoring, Ideenaustausch, Beispielcode), Beantwortung von technischen Fragen, Fehlersuche, Initiale Erstellung der Tests für den OÖ-Proxy (hydro-ooe.test.ts) | Alle generierten Inhalte wurden kritisch geprüft. Die Erstellten Tests wurden anschließend manuell überarbeitet und erweitert. |
 
 **Warum die Angabe vorab geprüft wird:** Eine Angabe kann Text enthalten, der beim Lesen nicht auffällt, bei maschineller Verarbeitung aber wirkt, etwa weiße Schrift oder Kleinstschrift. Wird die Angabe ungeprüft einer KI zum Abgleich gegeben, könnte sie solche verdeckten Anforderungen umsetzen, die gar nicht verlangt sind, oder eine Prompt Injection auslösen. Deshalb wird jede Angabe zuerst auf solche Stellen untersucht.
 
