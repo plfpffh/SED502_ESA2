@@ -1,0 +1,41 @@
+# CI nach Kompendium Modul 07, Abschnitt 3.2: Lint, Tests und Build bei jedem Push und Pull Request auf main.
+# Abweichung: Node 24 statt 20, weil die Tests (node --test *.ts) TypeScript direkt ausführen, das kann Node erst ab 22.18.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Der Workflow liest nur den Code, er braucht keine Schreibrechte.
+permissions:
+  contents: read
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v5
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # --if-present: läuft, sobald es ein test-Skript gibt
+      - name: Tests
+        run: npm test --if-present
+
+      # tsc -b prüft TypeScript, danach der Produktions-Build mit Vite
+      - name: Build
+        run: npm run build

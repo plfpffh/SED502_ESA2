@@ -281,7 +281,9 @@ Jede Person übernimmt **einen vertikalen Strang**: Proxy → Adapter → Hook �
 - ✅ Vite + React + TypeScript + ESLint, `.gitignore` inkl. `.env` und `.vercel` (Commit `7492370`)
 - ✅ Stammdaten, Datenmodell und Filterlogik aus ESA 1 unverändert übernommen (Commit `80e5646`)
 - ✅ B (`cchhrriiss`) als Collaborator eingeladen
-- ☐ `main` schützen (Merge nur per Pull Request, 1 Review durch die andere Person)
+- ☐ CI mit GitHub Actions (`.github/workflows/ci.yml`: Lint, Tests, Build bei jedem Pull Request, Kompendium Modul 07)
+- ☐ `main` schützen (Merge nur per Pull Request, 1 Review durch die andere Person, CI muss grün sein)
+- ☐ Vercel mit dem Repository verbinden (CD: Vorschau-URL je Pull Request, `main` wird automatisch veröffentlicht)
 - ☐ React Router, `vercel.json` (SPA-Rewrite), `.env.example`
 - ☐ `App.tsx` (Routen), `komponenten/Navigation.tsx`, `seiten/NichtGefunden.tsx`
 - ☐ `daten/seen.ts` umbauen: Messwerte raus, Stationen und lat/lng rein; `typen/messung.ts` anlegen (Abschnitt 5)
@@ -374,7 +376,7 @@ Das Thema berührt Sicherheit (Eis) und Klimadaten. Fachliche Genauigkeit hat de
 - Kleine, aussagekräftige Commits („Adapter für Hydro OÖ mit Fehlerbehandlung“), kein Mega-Commit am Ende.
 - Jede Person committet **von ihrem eigenen GitHub-Konto**.
 - `.env` **nie** committen. Wurde ein Key versehentlich gepusht: sofort beim Anbieter widerrufen und neu erzeugen.
-- Vor jedem Pull Request: `npm run build` läuft lokal fehlerfrei.
+- Vor jedem Pull Request: `npm run lint`, `npm test` und `npm run build` laufen lokal fehlerfrei. Die CI prüft dasselbe noch einmal am Merge-Stand. Gemergt wird nur bei grüner CI.
 
 ## 10. Zeitplan
 
@@ -403,7 +405,7 @@ Das Thema berührt Sicherheit (Eis) und Klimadaten. Fachliche Genauigkeit hat de
 - [ ] Beide Personen haben erkennbare, gleichwertige Commits
 - [ ] README: Beschreibung & Zielgruppe, Technologien & APIs, Installation, Aufgabenverteilung, AI-Einsatz (Tools, wofür, Ergebnis; welche Daten gehen an die LLM-API, welches Modell)
 - [ ] README-Aufgabenverteilung auf den **Ist-Stand** umgestellt: wer hat was tatsächlich umgesetzt (mit den wichtigsten Dateien je Person), keine *geplant*-Markierungen mehr, Abweichungen vom Plan korrigiert
-- [ ] `npm run build` ohne Fehler
+- [ ] `npm run build` ohne Fehler, CI auf `main` grün
 - [ ] Abgabe: Repository-URL **und** Namen beider Personen im Abgabebereich
 
 ## 12. Schon an ESA 3 denken
