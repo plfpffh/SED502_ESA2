@@ -22,15 +22,15 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 |---|---|---|
 | React 19, TypeScript 6, Vite 8 | Grundgerüst der App | ✅ |
 | ESLint mit `react-hooks` | prüft u. a. vollständige Abhängigkeits-Arrays von `useEffect` | ✅ |
-| React Router | Navigation zwischen den Seiten | geplant |
-| Vercel Serverless Functions | Proxy für die Landesdaten, geschützter LLM-Aufruf | OÖ-Proxy implementiert. Die übrigen Funktionen und Deployment geplant |
+| React Router 8 (Paket `react-router`, seit Version 7 ohne `-dom`) | Navigation zwischen den Seiten | ✅ |
+| Vercel Serverless Functions | Proxy für die Landesdaten, geschützter LLM-Aufruf | OÖ- und Salzburg-Proxy implementiert. LLM-Funktion und Deployment geplant |
 | Recharts | Diagramm der Frosttage pro Winter | geplant |
 
 ## APIs und Datenquellen
 
 | Quelle | Inhalt | Zugriff |
 |---|---|---|
-| [Hydris Salzburg](https://www.salzburg.gv.at/wasser/hydro/) | Wassertemperatur der Salzburger Seen | über `/api`-Proxy (kein CORS) – geplant |
+| [Hydris Salzburg](https://www.salzburg.gv.at/wasser/hydro/) | Wassertemperatur der Salzburger Seen | `/api/hydris-salzburg` implementiert, Adapter und React-Anbindung geplant |
 | [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | `/api/hydro-ooe` implementiert, Adapter und React-Anbindung geplant |
 | [Open-Meteo Historical Weather](https://open-meteo.com/) | Tageswerte der Lufttemperatur seit 1940 → Frost-, Eis- und Hitzetage | direkt – geplant |
 | Open-Meteo Forecast | Lufttemperatur-Prognose für 7 Tage | direkt – geplant |
@@ -41,6 +41,8 @@ Hydris und der Hydrographische Dienst OÖ sind **keine offiziell dokumentierten 
 
 OÖ-Quelle: <https://hydro.ooe.gv.at/daten/internet/layers/5/index.json>, geprüft am **11.10.2026**. Der Proxy benötigt keinen API-Schlüssel.
 
+Salzburg-Quelle: <https://www.salzburg.gv.at/wasser/hydro/grafiken/data.json>, geprüft am **28.10.2026**. Liefert eine einzelne Station keinen gültigen Wert, wird nur dieser See als „Wert aktuell nicht vorhanden“ angezeigt.
+
 ## Installation
 
 ```bash
@@ -48,7 +50,7 @@ npm install
 npm run dev        # nur Frontend, http://localhost:5173
 npm run build      # TypeScript-Prüfung + Produktions-Build
 npm run lint       # ESLint
-npm test           # OÖ-Proxy testen
+npm test           # Tests (Proxys, fetchJSON)
 ```
 
 Nach Einrichtung des Vercel-Projekts durch Person A laufen Frontend und `/api`-Funktionen gemeinsam mit:
@@ -93,7 +95,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 
 **Gemeinsam:** Schnittstellen in `src/typen/` (erster Arbeitstag), System-Prompt der KI, Review jedes Pull Requests durch die jeweils andere Person.
 
-**Bereits erledigt (Person A):** Projekt-Setup mit Vite, React, TypeScript und ESLint (Commit `7492370`) · Übernahme von Stammdaten, Datenmodell und Filterlogik aus ESA 1 (Commit `80e5646`).
+**Bereits erledigt (Person A):** Projekt-Setup mit Vite, React, TypeScript und ESLint (Commit `7492370`) · Übernahme von Stammdaten, Datenmodell und Filterlogik aus ESA 1 (Commit `80e5646`) · CI mit GitHub Actions · Typen nach Planung Abschnitt 5, Stammdaten mit Stationen und Koordinaten · React Router mit Layout, Navigation und 404-Seite · `fetchJSON` und `useFetch` mit Tests · Salzburg-Proxy `api/hydris-salzburg.ts` und Tests.
 
 **Implementiert (Person B):** OÖ-Proxy `api/hydro-ooe.ts` und Tests. Die übrigen B-Aufgaben bleiben geplant.
 
