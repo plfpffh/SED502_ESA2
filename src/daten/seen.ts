@@ -8,7 +8,8 @@
  * @author   Peter Luckmann, Christoph Hauser
  */
 
-import type { See } from '../typen/see';
+// mit Endung, weil auch die Tests (Node) diese Datei laden
+import type { See } from '../typen/see.ts';
 
 /**
  * Fläche, Tiefe, Seehöhe: deutschsprachige Wikipedia (Infobox), abgerufen am 25.09.2026.
