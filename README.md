@@ -1,5 +1,7 @@
 # Seen im Klimawandel – Salzburg & Oberösterreich
 
+[![CI](https://github.com/plfpffh/SED502_ESA2/actions/workflows/ci.yml/badge.svg)](https://github.com/plfpffh/SED502_ESA2/actions/workflows/ci.yml)
+
 Gruppenprojekt für die Einsendeaufgabe 2 im Modul **SED502 Front-End Development** (Ferdinand Porsche FernFH, WS 2026/27).
 
 > **Status:** in Entwicklung. Punkte, die noch nicht umgesetzt sind, sind als *geplant* gekennzeichnet. Die verbindliche, ausführliche Planung steht in [`docs/PLANUNG.md`](docs/PLANUNG.md).
@@ -58,6 +60,12 @@ npx vercel dev          # Frontend und /api-Funktionen gemeinsam
 Kompendium Modul 05 legt den LLM-Key als `VITE_…`-Variable ab und ruft die API direkt aus dem Browser auf. Alles, was in Vite mit `VITE_` beginnt, wird aber in das ausgelieferte JavaScript eingebaut und ist für jede Person lesbar, die die Seite öffnet. Wer den Key hat, kann auf unsere Kosten Anfragen stellen.
 
 Wir weichen deshalb bewusst ab: Der Key heißt `ANTHROPIC_API_KEY` bzw. `GEMINI_API_KEY` **ohne** `VITE_`-Präfix, liegt lokal in `.env` (per `.gitignore` ausgeschlossen) und auf Vercel als Umgebungsvariable und wird ausschließlich in der Serverless-Funktion `api/ki.ts` gelesen. Damit ist die Vorgabe der Angabe erfüllt („sicher in einer .env-Datei verwaltet und nicht im Repository“), und der Key verlässt nie den Server.
+
+## Qualitätssicherung: CI
+
+Bei jedem Push auf `main` und bei jedem Pull Request prüft GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) den Code mit `npm ci`, `npm run lint`, `npm test` und `npm run build`. Der Build enthält `tsc -b`, TypeScript-Fehler fallen also auf. Bei einem Pull Request wird der Stand **nach** dem Merge geprüft.
+
+Benötigt wird **Node.js ab 22.18** (in der CI: Node 24), weil die Tests TypeScript-Dateien direkt mit `node --test` ausführen.
 
 ## Aufgabenverteilung
 
