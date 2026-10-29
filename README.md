@@ -23,7 +23,7 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 | React 19, TypeScript 6, Vite 8 | Grundgerüst der App | ✅ |
 | ESLint mit `react-hooks` | prüft u. a. vollständige Abhängigkeits-Arrays von `useEffect` | ✅ |
 | React Router 8 (Paket `react-router`, seit Version 7 ohne `-dom`) | Navigation zwischen den Seiten | ✅ |
-| Vercel Serverless Functions | Proxy für die Landesdaten, geschützter LLM-Aufruf | OÖ- und Salzburg-Proxy implementiert. LLM-Funktion und Deployment geplant |
+| Serverless Functions im Format von Vercel (`api/`) | Proxy für die Landesdaten, geschützter LLM-Aufruf | OÖ-, Salzburg- und KI-Proxy implementiert, lokal über `npm run dev`. Das Deployment auf Vercel ist Teil von ESA 3 |
 | Recharts | Diagramm der Frosttage pro Winter | geplant |
 
 ## APIs und Datenquellen
@@ -53,7 +53,7 @@ npm run lint       # ESLint
 npm test           # Tests (Proxys, KI-Proxy, Adapter, Logik, Filter, Formatierung, fetchJSON, aiStream, Dev-Server-Plugin)
 ```
 
-Die Funktionen in `api/` laufen auf Vercel als Serverless Functions. Damit `npm run dev` sie auch lokal ausführt, ohne Vercel-Konto und ohne `vercel dev`, bindet [vite-plugin-api.ts](vite-plugin-api.ts) sie in den Vite-Dev-Server ein: `/api/<name>` ruft den Default-Export von `api/<name>.ts` mit Request und Response auf, genau wie auf Vercel. Variablen aus `.env` ohne `VITE_`-Präfix stehen dabei nur dem Dev-Server zur Verfügung, nie dem Browser.
+Die Funktionen in `api/` sind im Format von Vercel Serverless Functions geschrieben (Deployment in ESA 3). Damit `npm run dev` sie lokal ausführt, ohne Vercel-Konto und ohne `vercel dev`, bindet [vite-plugin-api.ts](vite-plugin-api.ts) sie in den Vite-Dev-Server ein: `/api/<name>` ruft den Default-Export von `api/<name>.ts` mit Request und Response auf, genau wie auf Vercel. Variablen aus `.env` ohne `VITE_`-Präfix stehen dabei nur dem Dev-Server zur Verfügung, nie dem Browser.
 
 Für die KI-Anbindung wird ein eigener Gemini-API-Key aus [Google AI Studio](https://aistudio.google.com/app/apikey) benötigt:
 
@@ -67,11 +67,11 @@ Ohne Key läuft die App trotzdem, nur `/api/ki` antwortet mit „Die KI ist nich
 
 Kompendium Modul 05 legt den LLM-Key als `VITE_…`-Variable ab und ruft die API direkt aus dem Browser auf. Alles, was in Vite mit `VITE_` beginnt, wird aber in das ausgelieferte JavaScript eingebaut und ist für jede Person lesbar, die die Seite öffnet. Wer den Key hat, kann auf unsere Kosten Anfragen stellen.
 
-Wir weichen deshalb bewusst ab: Der Key heißt `GEMINI_API_KEY` **ohne** `VITE_`-Präfix, liegt lokal in `.env` (per `.gitignore` ausgeschlossen) und auf Vercel als Umgebungsvariable und wird ausschließlich in der Serverless-Funktion `api/ki.ts` gelesen. Damit ist die Vorgabe der Angabe erfüllt („sicher in einer .env-Datei verwaltet und nicht im Repository“), und der Key verlässt nie den Server.
+Wir weichen deshalb bewusst ab: Der Key heißt `GEMINI_API_KEY` **ohne** `VITE_`-Präfix, liegt lokal in `.env` (per `.gitignore` ausgeschlossen) und wird ausschließlich in der Serverless-Funktion `api/ki.ts` gelesen. Damit ist die Vorgabe der Angabe erfüllt („sicher in einer .env-Datei verwaltet und nicht im Repository“), und der Key verlässt nie den Server.
 
 ## Qualitätssicherung: CI
 
-Bei jedem Push auf `main` und bei jedem Pull Request prüft GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) den Code mit `npm ci`, `npm run lint`, `npm test` und `npm run build`. Der Build enthält `tsc -b`, TypeScript-Fehler fallen also auf. Bei einem Pull Request wird der Stand **nach** dem Merge geprüft.
+CI/CD ist Thema von Kompendium Modul 07 (ESA 3). Die CI haben wir bewusst vorgezogen, damit jeder Pull Request automatisch geprüft wird. Bei jedem Push auf `main` und bei jedem Pull Request prüft GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) den Code mit `npm ci`, `npm run lint`, `npm test` und `npm run build`. Der Build enthält `tsc -b`, TypeScript-Fehler fallen also auf. Bei einem Pull Request wird der Stand **nach** dem Merge geprüft.
 
 Benötigt wird **Node.js ab 22.18** (in der CI: Node 24), weil die Tests TypeScript-Dateien direkt mit `node --test` ausführen.
 
@@ -105,7 +105,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 
 | Person | Tool | wofür | Ergebnis / eigene Prüfung |
 |---|---|---|---|
-| plfpffh | Claude Code (Anthropic, Claude Opus 5.5, September 2026) | Pair Programming: Review, Refactoring, Ideenaustausch, Abgleich von Umsetzung und Anforderungen (Angabe, Kompendium Modul 03–05), Prüfung, ob ESA-1-Dateien korrekt übernommen wurden | Doku-Review: Prüfung, ob Planung und Aufgabenverteilung vollständig und ausgewogen ist|
+| plfpffh | Claude Code (Anthropic, Claude Opus 5.5, September 2026 und Oktober 2026) | Pair Programming: Review, Refactoring, Ideenaustausch, Abgleich von Umsetzung und Anforderungen (Angabe, Kompendium Modul 03–05), Prüfung, ob ESA-1-Dateien korrekt übernommen wurden | Doku-Review: Prüfung, ob Planung und Aufgabenverteilung vollständig und ausgewogen ist|
 | plfpffh | Claude Code | Prüfung der Angabe-PDFs (ESA 02 und ESA 03) auf versteckte Textstellen, bevor sie mit der KI gegen die Umsetzung abgeglichen werden | Keine versteckten Textstellen gefunden. Weißer Text kommt nur als sichtbare Schrift auf farbigem Hintergrund vor (Titelbalken, Tabellenköpfe) |
 | plfpffh | Claude Code | Dokumentation: Dateiköpfe, Kommentare und README-Texte | Bewusster Teil der Qualitätssicherung, siehe unten |
 | cchhrriiss | Codex (OpenAI, GPT-6.1 Sol, Oktober 2026) | Pair Programming (Review, Refactoring, Ideenaustausch, Beispielcode), Beantwortung von technischen Fragen, Fehlersuche, Initiale Erstellung der Tests für den OÖ-Proxy (hydro-ooe.test.ts) | Alle generierten Inhalte wurden kritisch geprüft. Die Erstellten Tests wurden anschließend manuell überarbeitet und erweitert. |
@@ -117,6 +117,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 **In der App** (*geplant*)
 
 - **Anbieter:** Google Gemini (kostenloses Kontingent). Google darf Eingaben im kostenlosen Kontingent zur Verbesserung seiner Produkte verwenden, daher sollen Nutzer\*innen keine persönlichen Daten eingeben.
-- **Modell:** `gemini-3.6-flash` (kostenloses Kontingent), über `GEMINI_MODEL` änderbar
+- **Modell:** `gemini-3.5-flash-lite` (kostenloses Kontingent), über `GEMINI_MODEL` änderbar. Gewählt wegen der Limits im kostenlosen Kontingent (laut Google AI Studio, Stand 29.10.2026): 15 Anfragen pro Minute und 500 pro Tag. `gemini-3.6-flash` erlaubt nur 5 pro Minute und 20 pro Tag. Beide Modelle hielten in unseren Tests die KI-Regeln ein.
+- **Grenzen (umgesetzt in `api/ki.ts`):** höchstens 20 Nachrichten Verlauf plus Systemanweisung, 20.000 Zeichen pro Anfrage und 2048 Tokens pro Antwort. Der Browser kann diese Grenzen nicht ändern. Fehler der LLM-API werden nie als roher Text angezeigt, sondern als verständliche Meldung (z. B. bei zu vielen Anfragen).
 - **Welche Daten gehen an die LLM-API:** aktuelle Messwerte und berechnete Klimakennzahlen der Seen sowie im KI-Berater die Eingabe der Nutzer\*innen (z. B. Wohnort und Vorhaben). Es werden keine Konten oder personenbezogenen Daten gespeichert. Nutzer\*innen sollten keine persönlichen Daten eingeben.
 - **Regeln für die KI:** Sie interpretiert nur die mitgelieferten Zahlen, erfindet keine Messwerte oder Studien, schätzt fehlende Werte nicht und erklärt Eis nie für sicher. Alle Antworten sind als **KI-generiert** gekennzeichnet.
