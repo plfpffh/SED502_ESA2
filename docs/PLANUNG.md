@@ -102,11 +102,11 @@ useAI         ─fetch─► /api/ki (Streaming)    ─► LLM-API            (A
 
 **Warum Serverless Functions?**
 1. Die beiden Landesquellen erlauben keinen Browser-Zugriff (kein CORS).
-2. Der **API-Key bleibt auf dem Server.** Alles, was in Vite mit `VITE_` beginnt, landet im ausgelieferten JavaScript und ist für jede Person sichtbar, auch wenn es in `.env` steht. Die Variable heißt deshalb `ANTHROPIC_API_KEY` bzw. `GEMINI_API_KEY` **ohne** `VITE_`-Präfix und wird nur in `api/ki.ts` gelesen.
+2. Der **API-Key bleibt auf dem Server.** Alles, was in Vite mit `VITE_` beginnt, landet im ausgelieferten JavaScript und ist für jede Person sichtbar, auch wenn es in `.env` steht. Die Variable heißt deshalb `GEMINI_API_KEY` **ohne** `VITE_`-Präfix und wird nur in `api/ki.ts` gelesen.
 
 > **Bewusste Abweichung vom Kompendium:** Modul 05 (Abschnitt 1.4) legt den Key als `VITE_…` ab und ruft die LLM-API direkt aus dem Browser auf. Damit steht der Key im ausgelieferten JavaScript und kann von jeder Person ausgelesen und missbraucht werden. Die Angabe verlangt, dass der Key „sicher in einer .env-Datei verwaltet und nicht im Repository“ ist. Beides erfüllen wir: Der Key liegt lokal in `.env` (nicht im Repository) und auf Vercel als Umgebungsvariable, gelesen wird er nur serverseitig. Diese Begründung steht auch im README.
 
-Lokal starten mit `npx vercel dev` (führt Vite **und** die `/api`-Funktionen aus). `npm run dev` allein kennt `/api` nicht.
+Lokal starten mit `npm run dev`. Das Plugin `vite-plugin-api.ts` führt die `/api`-Funktionen im Vite-Dev-Server aus, ein Vercel-Konto oder `vercel dev` ist dafür nicht nötig.
 
 ## 4. Vor dem Kick-off (jede Person)
 
@@ -114,12 +114,26 @@ Lokal starten mit `npx vercel dev` (führt Vite **und** die `/api`-Funktionen au
 - [ ] Node.js (LTS) installiert, `node -v` funktioniert
 - [ ] Vercel-Konto (kostenlos, mit GitHub anmelden), `npx vercel login` einmal ausführen
 - [ ] Eigene Datenquelle im Browser aufrufen und prüfen, ob URL und Feldnamen aus Abschnitt 3 noch stimmen
-- [ ] Person A: LLM-Anbieter mit B abstimmen und API-Key erzeugen (Abschnitt 7)
+- [x] LLM-Anbieter: **Google Gemini** (kostenloses Kontingent), entschieden am 28.10.2026 (Abschnitt 7)
+- [ ] A und B: je einen eigenen Gemini-API-Key in Google AI Studio erzeugen (nicht weitergeben); A trägt einen davon auf Vercel ein
 - [ ] Kompendium Modul 03–05 griffbereit (fetch, React, useAI-Hook)
 
 ## 5. Gemeinsamer Vertrag (am Kick-off gemeinsam, erster Commit)
 
 Diese Typen und Funktionssignaturen **zuerst gemeinsam** festlegen und committen. Danach kann jede Person unabhängig arbeiten, weil beide Adapter dasselbe Format liefern und die Seiten gegen dieselben Typen gebaut werden. Wer den Vertrag später ändern will, spricht das vorher ab.
+
+Die Datentypen stehen in `src/typen/`. Die Funktionssignaturen sind in `src/typen/schnittstellen.ts` als **Funktions-Typen** hinterlegt. Funktionen und Hooks selbst werden erst in den jeweiligen Arbeitspaketen implementiert.
+
+**Übergang vom ESA-1-Code:** Der Vertrag enthält bereits das neue Modell. Person A muss `src/daten/seen.ts` (Koordinaten und Stationen statt fester Messwerte) und `src/utils/seen.ts` (separate Messungen, neue Parameter, Eissport-Filter und Sortierung) noch umstellen. Bis dahin sind TypeScript-Fehler in diesen beiden Dateien zu erwarten.
+
+**Nächste Schritte für Person A:**
+
+1. Die vorhandenen Vertragsdateien gemeinsam reviewen und übernehmen. `messung.ts`, `ai.ts` und die anderen Typdateien sind bereits angelegt. `schnittstellen.ts` enthält ausschließlich Typen. Die tatsächlichen Funktionen und Hooks müssen noch implementiert werden.
+2. In `src/daten/seen.ts` bei allen 14 Seen die festen `messwerte` durch `stationen` ersetzen und WGS84-Koordinaten (`lat`/`lng`) ergänzen. Stationsnummern aus Abschnitt 3 verwenden und gegen die jeweilige Quelle prüfen. `STAND_DER_MESSWERTE` entfällt. Die Zeitangaben kommen künftig aus den einzelnen Live-Messungen.
+3. In `src/utils/seen.ts` den Mittelwert aus den separat übergebenen Messungen berechnen. `zuAnsicht(see, messungen)` bildet alle in `see.stationen` hinterlegten Messstellen ab. Die Zuordnung erfolgt über `seeId`, `quelle` und `messstelle`. Ohne Messung sind Temperatur und Zeitstempel `null`. Mittelwerte berücksichtigen ausschließlich vorhandene Temperaturen. `laengsteKaelteserie` wird zunächst auf `null` gesetzt. Die bisherige Funktion `messzeitpunkt()` für einen globalen statischen Zeitpunkt entfällt.
+4. `waehleSeen(seen, messungen, klima, filter)` auf die neue Signatur umstellen und keine Stammdaten mehr selbst importieren. Die Ansichten mit `seen.map((see) => zuAnsicht(see, messungen))` erzeugen und ihre `laengsteKaelteserie` aus den Kennzahlen von `useKlimaAlle` (B) ergänzen. Diese enthalten nur den letzten abgeschlossenen Winter. Die lange Historie bleibt auf der Detailseite.
+5. Filter und Sortierung erweitern: Badefilter verwenden die Wassertemperatur, Eissportfilter die Kälteserie. Fehlende Werte bleiben sichtbar und stehen im jeweiligen Modus am Ende. Neue Filterobjekte benötigen `aktivitaet` und `mindestKaeltetage`. Die Sortierung muss auch `kaelteserie` behandeln.
+6. Danach müssen `npm run build` und `npm run lint` wieder erfolgreich sein. Als nächste A-Arbeitspakete folgen Router, `fetchJSON` und `useFetch`, anschließend Messungs- und KI-Hooks gemäß Abschnitt 6. `useSeeMessungen.neuLaden()` lädt beide Quellen erneut. Eine ausgefallene Quelle darf die andere nicht blockieren. Klima- und Prognosehooks werden von B implementiert.
 
 ```ts
 // src/typen/see.ts
@@ -160,11 +174,29 @@ export interface Klimakennzahlen {
   frosttage: number;            // Tagesminimum < 0 °C
   eistage: number;              // Tagesmaximum < 0 °C
   laengsteKaelteserie: number;  // längste Serie von Tagen mit Tagesmittel < 0 °C
-  kaeltesumme: number;          // Summe der negativen Tagesmittel
+  kaeltesumme: number;          // Summe der negativen Tagesmittel, also <= 0 (°C · Tage)
   hitzetage: number;            // Tagesmaximum ≥ 30 °C (Sommer davor)
 }
 
-// src/typen/ansicht.ts – aus ESA 1 übernommen: Filter, SeeAnsicht, MessstelleAnsicht, Statistik
+// src/typen/ansicht.ts – MessstelleAnsicht erweitert. Filter/SeeAnsicht siehe unten
+export interface MessstelleAnsicht {
+  name: string;
+  quelle: Datenquelle;
+  temperatur: number | null; // null = fehlender Messwert
+  zeitpunkt?: string | null; // ISO-Zeitstempel, optional
+}
+
+// src/typen/prognose.ts – Lufttemperatur für den KI-Berater
+export interface Prognosetag {
+  datum: string; // YYYY-MM-DD, Ortszeit des Sees
+  temperaturMin: number | null;
+  temperaturMax: number | null;
+}
+
+export interface SeePrognose {
+  seeId: string;
+  tage: Prognosetag[];
+}
 ```
 
 ```ts
@@ -185,6 +217,7 @@ export function useSeeMessungen(): {
   messungen: SeeMessung[];       // alles, was geladen werden konnte
   isLaden: boolean;
   fehler: { salzburg: string | null; ooe: string | null };  // eine Quelle darf ausfallen
+  neuLaden: () => void;
 };
 
 // src/utils/seen.ts (A, aus ESA 1)
@@ -192,7 +225,7 @@ export function waehleSeen(seen: See[], messungen: SeeMessung[], klima: Klimaken
 export function zuAnsicht(see: See, messungen: SeeMessung[]): SeeAnsicht;
 
 // src/hooks/useKlimatrend.ts (B)
-export function useKlimatrend(see: See): { kennzahlen: Klimakennzahlen[]; isLaden: boolean; fehler: string | null };
+export function useKlimatrend(see: See): { kennzahlen: Klimakennzahlen[]; isLaden: boolean; fehler: string | null; neuLaden: () => void };
 
 // src/typen/ai.ts (A) – nach Kompendium Modul 05, Abschnitt 2.1, ergänzt um id
 export type Rolle = 'system' | 'user' | 'assistant';
@@ -224,6 +257,8 @@ export function useAI(optionen?: { systemPrompt?: string; maxNachrichten?: numbe
 ```
 
 **Begriffe sauber verwenden:** Frosttag (Tmin < 0 °C), Eistag (Tmax < 0 °C) und Hitzetag (Tmax ≥ 30 °C) sind feste meteorologische Definitionen. Open-Meteo liefert dafür `temperature_2m_min`, `temperature_2m_max` und `temperature_2m_mean`.
+
+**Einheitliche Projektdefinition:** Winter = Dezember bis Februar, Sommer davor = Juni bis August. Winter `2025/26` bezeichnet Dezember 2025 bis Februar 2026 und den Sommer 2025. Nicht auswertbare Zeiträume liefern kein `Klimakennzahlen`-Objekt. Eine 0 steht für einen berechneten Wert. `useKlimaAlle` liefert nur den letzten **abgeschlossenen** Winter. Die Kältesumme bleibt gemäß obigem Vertrag eine negative Summe beziehungsweise 0.
 
 **Fehlende Messwerte (Regel aus ESA 1, gilt für alle Seiten):** Liefert eine Quelle für einen See keinen Wert, wird der See **nicht ausgeblendet**, sondern mit „Wert aktuell nicht vorhanden“ angezeigt und steht bei jeder Sortierung und jedem Temperaturfilter am Ende. Sonst würden Nutzer\*innen annehmen, der See erfülle den Filter nicht, obwohl wir schlicht keine Information haben. `filtereSeen()` in `utils/seen.ts` setzt das bereits um. `SeeAnsicht.temperatur` ist dann `null`. Komponenten zeigen `null` nie als „0 °C“ an.
 
@@ -263,7 +298,10 @@ export interface Filter {
 //   laengsteKaelteserie: number | null;   // letzter Winter, null = keine Klimadaten
 
 // src/hooks/useKlimaAlle.ts (B) – Kennzahlen des letzten Winters für alle Seen
-export function useKlimaAlle(seen: See[]): { kennzahlen: Klimakennzahlen[]; isLaden: boolean; fehler: string | null };
+export function useKlimaAlle(seen: See[]): { kennzahlen: Klimakennzahlen[]; isLaden: boolean; fehler: string | null; neuLaden: () => void };
+
+// src/hooks/usePrognose.ts (B) – sieben Tage Lufttemperatur für den KI-Berater
+export function usePrognose(seen: See[]): { prognosen: SeePrognose[]; isLaden: boolean; fehler: string | null; neuLaden: () => void };
 ```
 
 Open-Meteo einmal pro See abfragen (14 Anfragen) oder, falls die API mehrere Koordinaten in einer Anfrage erlaubt, gebündelt. **Vor Beginn in der Open-Meteo-Doku prüfen (B).**
@@ -286,7 +324,7 @@ Jede Person übernimmt **einen vertikalen Strang**: Proxy → Adapter → Hook �
 - ☐ Vercel mit dem Repository verbinden (CD: Vorschau-URL je Pull Request, `main` wird automatisch veröffentlicht)
 - ☐ React Router, `vercel.json` (SPA-Rewrite), `.env.example`
 - ☐ `App.tsx` (Routen), `komponenten/Navigation.tsx`, `seiten/NichtGefunden.tsx`
-- ☐ `daten/seen.ts` umbauen: Messwerte raus, Stationen und lat/lng rein; `typen/messung.ts` anlegen (Abschnitt 5)
+- ☐ `daten/seen.ts` und `utils/seen.ts` an den bereits angelegten Vertrag anpassen (konkrete Schritte in Abschnitt 5)
 
 **Salzburg-Strang**
 - `api/hydris-salzburg.ts` – Proxy, liefert nur Seen-Stationen
@@ -313,6 +351,7 @@ Jede Person übernimmt **einen vertikalen Strang**: Proxy → Adapter → Hook �
 **Klimatrend**
 - `src/datenquellen/openMeteo.ts` + `src/hooks/useKlimatrend.ts` (ein See, alle Winter, für SeeDetail)
 - `src/hooks/useKlimaAlle.ts` – letzter Winter für alle Seen, liefert `laengsteKaelteserie` für den Eissport-Filter der Seenliste (A)
+- `src/hooks/usePrognose.ts` – sieben Tage Lufttemperatur für den KI-Berater, nutzt `datenquellen/openMeteo.ts`
 - `src/utils/klima.ts` – Frost-, Eis- und Hitzetage, längste Kälteserie, Kältesumme (reine, testbare Funktionen ohne React)
 - `komponenten/KlimaDiagramm.tsx` (z.B. mit Recharts): Frosttage pro Winter, 1950 bis heute
 
@@ -356,7 +395,7 @@ Bis ein Teil fertig ist, gegen den Vertrag mit Testdaten arbeiten (z.B. ein fixe
 - verständliche Fehlermeldungen je Fehlerart (429 Rate Limit, 401/403, Netzwerk), nie roher API-Text
 - Kosten begrenzen: `max_tokens` setzen, Verlauf mit `maxNachrichten` kürzen
 
-**Technik:** Streaming ist Pflicht (Antworten > 1 Satz). Anbieter gemeinsam wählen: **Google Gemini** (kostenloses Kontingent) oder **Anthropic Claude Haiku 4.5** (günstig, im Kompendium Modul 05 verwendet).
+**Technik:** Streaming ist Pflicht (Antworten > 1 Satz). Anbieter: **Google Gemini** (kostenloses Kontingent, Entscheidung vom 28.10.2026). Das Kompendium Modul 05 zeigt nur OpenAI und Anthropic. Den Gemini-Stream (`streamGenerateContent` mit `alt=sse`) übersetzt `api/ki.ts` in reinen Text, `aiStream` und `useAI` bleiben dadurch anbieterunabhängig. Im kostenlosen Kontingent darf Google die Eingaben zur Verbesserung seiner Produkte verwenden. Deshalb gehen nur Seedaten und die Eingabe der Nutzer\*innen an die API, und die Oberfläche bittet, keine persönlichen Daten einzugeben.
 
 ## 8. Regeln für den System-Prompt
 

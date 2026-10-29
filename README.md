@@ -22,40 +22,38 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 |---|---|---|
 | React 19, TypeScript 6, Vite 8 | Grundgerüst der App | ✅ |
 | ESLint mit `react-hooks` | prüft u. a. vollständige Abhängigkeits-Arrays von `useEffect` | ✅ |
-| React Router | Navigation zwischen den Seiten | geplant |
-| Vercel Serverless Functions | Proxy für die Landesdaten, geschützter LLM-Aufruf | OÖ-Proxy implementiert. Die übrigen Funktionen und Deployment geplant |
+| React Router 8 (Paket `react-router`, seit Version 7 ohne `-dom`) | Navigation zwischen den Seiten | ✅ |
+| Vercel Serverless Functions | Proxy für die Landesdaten, geschützter LLM-Aufruf | OÖ- und Salzburg-Proxy implementiert. LLM-Funktion und Deployment geplant |
 | Recharts | Diagramm der Frosttage pro Winter | geplant |
 
 ## APIs und Datenquellen
 
 | Quelle | Inhalt | Zugriff |
 |---|---|---|
-| [Hydris Salzburg](https://www.salzburg.gv.at/wasser/hydro/) | Wassertemperatur der Salzburger Seen | über `/api`-Proxy (kein CORS) – geplant |
+| [Hydris Salzburg](https://www.salzburg.gv.at/wasser/hydro/) | Wassertemperatur der Salzburger Seen | `/api/hydris-salzburg`, Adapter und Laden über `useSeeMessungen` implementiert, Anzeige in der Seenliste geplant |
 | [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | `/api/hydro-ooe` implementiert, Adapter und React-Anbindung geplant |
 | [Open-Meteo Historical Weather](https://open-meteo.com/) | Tageswerte der Lufttemperatur seit 1940 → Frost-, Eis- und Hitzetage | direkt – geplant |
 | Open-Meteo Forecast | Lufttemperatur-Prognose für 7 Tage | direkt – geplant |
-| LLM-API (Google Gemini oder Anthropic Claude Haiku 4.5, Wahl offen) | Einschätzung und Empfehlung, gestreamt | nur serverseitig über `/api/ki` – geplant |
+| LLM-API (Google Gemini) | Einschätzung und Empfehlung, gestreamt | nur serverseitig über `/api/ki` – geplant |
 | Deutschsprachige Wikipedia | Fläche, Tiefe, Seehöhe (Stammdaten aus ESA 1) | statisch |
 
 Hydris und der Hydrographische Dienst OÖ sind **keine offiziell dokumentierten APIs**. Das Format kann sich jederzeit ändern. Die App fängt Fehler dieser Quellen ab. Fällt eine Quelle aus, zeigt die andere weiterhin Werte, und betroffene Seen erscheinen mit „Wert aktuell nicht vorhanden“ am Ende der Liste, statt ausgeblendet zu werden.
 
 OÖ-Quelle: <https://hydro.ooe.gv.at/daten/internet/layers/5/index.json>, geprüft am **11.10.2026**. Der Proxy benötigt keinen API-Schlüssel.
 
+Salzburg-Quelle: <https://www.salzburg.gv.at/wasser/hydro/grafiken/data.json>, geprüft am **28.10.2026**. Liefert eine einzelne Station keinen gültigen Wert, wird nur dieser See als „Wert aktuell nicht vorhanden“ angezeigt.
+
 ## Installation
 
 ```bash
 npm install
-npm run dev        # nur Frontend, http://localhost:5173
+npm run dev        # Frontend und /api-Funktionen, http://localhost:5173
 npm run build      # TypeScript-Prüfung + Produktions-Build
 npm run lint       # ESLint
-npm test           # OÖ-Proxy testen
+npm test           # Tests (Proxys, Adapter, Logik, fetchJSON, Dev-Server-Plugin)
 ```
 
-Nach Einrichtung des Vercel-Projekts durch Person A laufen Frontend und `/api`-Funktionen gemeinsam mit:
-
-```bash
-npx vercel dev
-```
+Die Funktionen in `api/` laufen auf Vercel als Serverless Functions. Damit `npm run dev` sie auch lokal ausführt, ohne Vercel-Konto und ohne `vercel dev`, bindet [vite-plugin-api.ts](vite-plugin-api.ts) sie in den Vite-Dev-Server ein: `/api/<name>` ruft den Default-Export von `api/<name>.ts` mit Request und Response auf, genau wie auf Vercel. Variablen aus `.env` ohne `VITE_`-Präfix stehen dabei nur dem Dev-Server zur Verfügung, nie dem Browser.
 
 Für die KI-Anbindung, sobald Person A die `.env.example` ergänzt hat (*geplant*):
 
@@ -67,7 +65,7 @@ cp .env.example .env    # API-Key in .env eintragen, .env wird nie committet
 
 Kompendium Modul 05 legt den LLM-Key als `VITE_…`-Variable ab und ruft die API direkt aus dem Browser auf. Alles, was in Vite mit `VITE_` beginnt, wird aber in das ausgelieferte JavaScript eingebaut und ist für jede Person lesbar, die die Seite öffnet. Wer den Key hat, kann auf unsere Kosten Anfragen stellen.
 
-Wir weichen deshalb bewusst ab: Der Key heißt `ANTHROPIC_API_KEY` bzw. `GEMINI_API_KEY` **ohne** `VITE_`-Präfix, liegt lokal in `.env` (per `.gitignore` ausgeschlossen) und auf Vercel als Umgebungsvariable und wird ausschließlich in der Serverless-Funktion `api/ki.ts` gelesen. Damit ist die Vorgabe der Angabe erfüllt („sicher in einer .env-Datei verwaltet und nicht im Repository“), und der Key verlässt nie den Server.
+Wir weichen deshalb bewusst ab: Der Key heißt `GEMINI_API_KEY` **ohne** `VITE_`-Präfix, liegt lokal in `.env` (per `.gitignore` ausgeschlossen) und auf Vercel als Umgebungsvariable und wird ausschließlich in der Serverless-Funktion `api/ki.ts` gelesen. Damit ist die Vorgabe der Angabe erfüllt („sicher in einer .env-Datei verwaltet und nicht im Repository“), und der Key verlässt nie den Server.
 
 ## Qualitätssicherung: CI
 
@@ -93,7 +91,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 
 **Gemeinsam:** Schnittstellen in `src/typen/` (erster Arbeitstag), System-Prompt der KI, Review jedes Pull Requests durch die jeweils andere Person.
 
-**Bereits erledigt (Person A):** Projekt-Setup mit Vite, React, TypeScript und ESLint (Commit `7492370`) · Übernahme von Stammdaten, Datenmodell und Filterlogik aus ESA 1 (Commit `80e5646`).
+**Bereits erledigt (Person A):** Projekt-Setup mit Vite, React, TypeScript und ESLint (Commit `7492370`) · Übernahme von Stammdaten, Datenmodell und Filterlogik aus ESA 1 (Commit `80e5646`) · CI mit GitHub Actions · Typen nach Planung Abschnitt 5, Stammdaten mit Stationen und Koordinaten · React Router mit Layout, Navigation und 404-Seite · `fetchJSON` und `useFetch` mit Tests · Salzburg-Proxy `api/hydris-salzburg.ts` und Tests · Dev-Server-Plugin, damit `npm run dev` die `/api`-Funktionen ausführt · Filterlogik nach gemeinsamem Vertrag (alle Messstellen, Eissport-Filter, Kälteserie) mit Tests · Salzburg-Adapter `datenquellen/hydrisSalzburg.ts` mit Tests · `useSeeMessungen` lädt beide Quellen unabhängig voneinander · `SeeDatenContext` stellt die Messwerte allen Seiten bereit.
 
 **Implementiert (Person B):** OÖ-Proxy `api/hydro-ooe.ts` und Tests. Die übrigen B-Aufgaben bleiben geplant.
 
@@ -116,6 +114,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 
 **In der App** (*geplant*)
 
+- **Anbieter:** Google Gemini (kostenloses Kontingent). Google darf Eingaben im kostenlosen Kontingent zur Verbesserung seiner Produkte verwenden, daher sollen Nutzer\*innen keine persönlichen Daten eingeben.
 - **Modell:** offen
 - **Welche Daten gehen an die LLM-API:** aktuelle Messwerte und berechnete Klimakennzahlen der Seen sowie im KI-Berater die Eingabe der Nutzer\*innen (z. B. Wohnort und Vorhaben). Es werden keine Konten oder personenbezogenen Daten gespeichert. Nutzer\*innen sollten keine persönlichen Daten eingeben.
 - **Regeln für die KI:** Sie interpretiert nur die mitgelieferten Zahlen, erfindet keine Messwerte oder Studien, schätzt fehlende Werte nicht und erklärt Eis nie für sicher. Alle Antworten sind als **KI-generiert** gekennzeichnet.
