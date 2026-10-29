@@ -102,7 +102,7 @@ useAI         ─fetch─► /api/ki (Streaming)    ─► LLM-API            (A
 
 **Warum Serverless Functions?**
 1. Die beiden Landesquellen erlauben keinen Browser-Zugriff (kein CORS).
-2. Der **API-Key bleibt auf dem Server.** Alles, was in Vite mit `VITE_` beginnt, landet im ausgelieferten JavaScript und ist für jede Person sichtbar, auch wenn es in `.env` steht. Die Variable heißt deshalb `ANTHROPIC_API_KEY` bzw. `GEMINI_API_KEY` **ohne** `VITE_`-Präfix und wird nur in `api/ki.ts` gelesen.
+2. Der **API-Key bleibt auf dem Server.** Alles, was in Vite mit `VITE_` beginnt, landet im ausgelieferten JavaScript und ist für jede Person sichtbar, auch wenn es in `.env` steht. Die Variable heißt deshalb `GEMINI_API_KEY` **ohne** `VITE_`-Präfix und wird nur in `api/ki.ts` gelesen.
 
 > **Bewusste Abweichung vom Kompendium:** Modul 05 (Abschnitt 1.4) legt den Key als `VITE_…` ab und ruft die LLM-API direkt aus dem Browser auf. Damit steht der Key im ausgelieferten JavaScript und kann von jeder Person ausgelesen und missbraucht werden. Die Angabe verlangt, dass der Key „sicher in einer .env-Datei verwaltet und nicht im Repository“ ist. Beides erfüllen wir: Der Key liegt lokal in `.env` (nicht im Repository) und auf Vercel als Umgebungsvariable, gelesen wird er nur serverseitig. Diese Begründung steht auch im README.
 
@@ -114,7 +114,8 @@ Lokal starten mit `npx vercel dev` (führt Vite **und** die `/api`-Funktionen au
 - [ ] Node.js (LTS) installiert, `node -v` funktioniert
 - [ ] Vercel-Konto (kostenlos, mit GitHub anmelden), `npx vercel login` einmal ausführen
 - [ ] Eigene Datenquelle im Browser aufrufen und prüfen, ob URL und Feldnamen aus Abschnitt 3 noch stimmen
-- [ ] Person A: LLM-Anbieter mit B abstimmen und API-Key erzeugen (Abschnitt 7)
+- [x] LLM-Anbieter: **Google Gemini** (kostenloses Kontingent), entschieden am 28.10.2026 (Abschnitt 7)
+- [ ] A und B: je einen eigenen Gemini-API-Key in Google AI Studio erzeugen (nicht weitergeben); A trägt einen davon auf Vercel ein
 - [ ] Kompendium Modul 03–05 griffbereit (fetch, React, useAI-Hook)
 
 ## 5. Gemeinsamer Vertrag (am Kick-off gemeinsam, erster Commit)
@@ -394,7 +395,7 @@ Bis ein Teil fertig ist, gegen den Vertrag mit Testdaten arbeiten (z.B. ein fixe
 - verständliche Fehlermeldungen je Fehlerart (429 Rate Limit, 401/403, Netzwerk), nie roher API-Text
 - Kosten begrenzen: `max_tokens` setzen, Verlauf mit `maxNachrichten` kürzen
 
-**Technik:** Streaming ist Pflicht (Antworten > 1 Satz). Anbieter gemeinsam wählen: **Google Gemini** (kostenloses Kontingent) oder **Anthropic Claude Haiku 4.5** (günstig, im Kompendium Modul 05 verwendet).
+**Technik:** Streaming ist Pflicht (Antworten > 1 Satz). Anbieter: **Google Gemini** (kostenloses Kontingent, Entscheidung vom 28.10.2026). Das Kompendium Modul 05 zeigt nur OpenAI und Anthropic. Den Gemini-Stream (`streamGenerateContent` mit `alt=sse`) übersetzt `api/ki.ts` in reinen Text, `aiStream` und `useAI` bleiben dadurch anbieterunabhängig. Im kostenlosen Kontingent darf Google die Eingaben zur Verbesserung seiner Produkte verwenden. Deshalb gehen nur Seedaten und die Eingabe der Nutzer\*innen an die API, und die Oberfläche bittet, keine persönlichen Daten einzugeben.
 
 ## 8. Regeln für den System-Prompt
 
