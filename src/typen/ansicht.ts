@@ -8,7 +8,7 @@
  * @author   Peter Luckmann, Christoph Hauser
  */
 
-import type { Bundesland, Datenquelle } from './see';
+import type { Bundesland, Datenquelle } from './see.ts';
 
 export type Tiefenkategorie = 'flach' | 'mittel' | 'tief';
 

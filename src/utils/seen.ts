@@ -2,16 +2,18 @@
  * seen.ts – Geschäftslogik (Logikschicht)
  *
  * Reine Funktionen ohne DOM-Zugriff: Umwandeln, Filtern, Sortieren, Auswerten.
- * Stammdaten und Messungen kommen als Parameter, die Funktionen laden nichts selbst.
+ * Stammdaten, Messungen und Klimakennzahlen kommen als Parameter, die Funktionen laden nichts selbst.
  * Komponenten und Seiten dürfen nur SeeAnsicht-Objekte erhalten.
  *
  * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
  * @author   Peter Luckmann, Christoph Hauser
  */
 
-import type { See } from '../typen/see';
-import type { SeeMessung } from '../typen/messung';
-import type { Auswahl, Filter, SeeAnsicht, Statistik, Tiefenkategorie } from '../typen/ansicht';
+// mit Endung, weil auch die Tests (Node) diese Datei laden
+import type { See } from '../typen/see.ts';
+import type { SeeMessung } from '../typen/messung.ts';
+import type { Klimakennzahlen } from '../typen/klima.ts';
+import type { Auswahl, Filter, MessstelleAnsicht, SeeAnsicht, Statistik, Tiefenkategorie } from '../typen/ansicht.ts';
 
 /** Mittelwert aller Messungen eines Sees, auf eine Nachkommastelle gerundet. */
 export function mittlereTemperatur(messungen: SeeMessung[]): number | null {
@@ -43,11 +45,24 @@ export function badeEinschaetzung(temperatur: number): string {
 
 /**
  * Wandelt Stammdaten und Messungen eines Sees in die Form für die Anzeige um.
- * messungen darf alle Seen enthalten, verwendet werden nur die des übergebenen Sees.
+ * Alle Stationen aus den Stammdaten erscheinen, ohne Messung mit Temperatur und Zeitpunkt null.
+ * messungen darf alle Seen enthalten, zugeordnet wird über seeId, quelle und messstelle.
+ * laengsteKaelteserie bleibt null, waehleSeen ergänzt sie aus den Klimakennzahlen.
  */
 export function zuAnsicht(see: See, messungen: SeeMessung[]): SeeAnsicht {
   const eigene = messungen.filter((m) => m.seeId === see.id);
-  const temperatur = mittlereTemperatur(eigene);
+  const messstellen: MessstelleAnsicht[] = see.stationen.map((station) => {
+    const messung = eigene.find((m) => m.quelle === station.quelle && m.messstelle === station.messstelle);
+    return {
+      name: station.messstelle,
+      quelle: station.quelle,
+      temperatur: messung?.wassertemperatur ?? null,
+      zeitpunkt: messung?.zeitpunkt ?? null,
+    };
+  });
+  const temperatur = mittlereTemperatur(
+    eigene.filter((m) => see.stationen.some((s) => s.quelle === m.quelle && s.messstelle === m.messstelle)),
+  );
   return {
     id: see.id,
     name: see.name,
@@ -58,14 +73,25 @@ export function zuAnsicht(see: See, messungen: SeeMessung[]): SeeAnsicht {
     temperatur,
     badeEinschaetzung: temperatur === null ? null : badeEinschaetzung(temperatur),
     tiefenkategorie: tiefenkategorie(see),
-    messstellen: eigene.map((m) => ({ name: m.messstelle, quelle: m.quelle, temperatur: m.wassertemperatur })),
+    laengsteKaelteserie: null,
+    messstellen,
   };
+}
+
+/** Absteigend vergleichen, fehlende Werte (null) ans Ende. */
+function absteigend(a: number | null, b: number | null): number {
+  if (a === null || b === null) {
+    return (a === null ? 1 : 0) - (b === null ? 1 : 0);
+  }
+  return b - a;
 }
 
 function vergleiche(a: SeeAnsicht, b: SeeAnsicht, sortierung: Filter['sortierung']): number {
   switch (sortierung) {
     case 'temperatur':
-      return (b.temperatur ?? 0) - (a.temperatur ?? 0);
+      return absteigend(a.temperatur, b.temperatur);
+    case 'kaelteserie':
+      return absteigend(a.laengsteKaelteserie, b.laengsteKaelteserie);
     case 'tiefe':
       return b.maxTiefeM - a.maxTiefeM;
     case 'flaeche':
@@ -75,27 +101,34 @@ function vergleiche(a: SeeAnsicht, b: SeeAnsicht, sortierung: Filter['sortierung
   }
 }
 
+/** Der Wert, nach dem im jeweiligen Modus gefiltert wird: Wassertemperatur oder Kälteserie. */
+function wertFuerAktivitaet(see: SeeAnsicht, aktivitaet: Filter['aktivitaet']): number | null {
+  return aktivitaet === 'baden' ? see.temperatur : see.laengsteKaelteserie;
+}
+
 /**
- * Prüft die Mindesttemperatur.
- * Seen ohne Messwert bleiben immer sichtbar, da unbekannt ist, ob sie den Filter erfüllen.
+ * Prüft den Mindestwert des aktiven Modus (Baden: Temperatur, Eissport: Kältetage am Stück).
+ * Seen ohne Wert bleiben immer sichtbar, da unbekannt ist, ob sie den Filter erfüllen.
  */
-function erfuelltTemperatur(see: SeeAnsicht, mindestTemperatur: Filter['mindestTemperatur']): boolean {
-  if (mindestTemperatur === null || see.temperatur === null) {
+function erfuelltMindestwert(see: SeeAnsicht, filter: Filter): boolean {
+  const mindestwert = filter.aktivitaet === 'baden' ? filter.mindestTemperatur : filter.mindestKaeltetage;
+  const wert = wertFuerAktivitaet(see, filter.aktivitaet);
+  if (mindestwert === null || wert === null) {
     return true;
   }
-  return see.temperatur >= mindestTemperatur;
+  return wert >= mindestwert;
 }
 
 /**
  * Wendet alle Filter an und liefert eine neue, sortierte Liste.
- * Seen ohne Messwert stehen unabhängig von der Sortierung immer am Ende.
+ * Seen ohne Wert für den aktiven Modus stehen unabhängig von der Sortierung immer am Ende.
  */
 export function filtereSeen(alleSeen: SeeAnsicht[], filter: Filter): SeeAnsicht[] {
-  const ohneWert = (see: SeeAnsicht): number => (see.temperatur === null ? 1 : 0);
+  const ohneWert = (see: SeeAnsicht): number => (wertFuerAktivitaet(see, filter.aktivitaet) === null ? 1 : 0);
   return alleSeen
     .filter((see) => filter.bundesland === 'alle' || see.bundeslaender.includes(filter.bundesland))
     .filter((see) => filter.tiefe === 'alle' || see.tiefenkategorie === filter.tiefe)
-    .filter((see) => erfuelltTemperatur(see, filter.mindestTemperatur))
+    .filter((see) => erfuelltMindestwert(see, filter))
     .sort((a, b) => ohneWert(a) - ohneWert(b) || vergleiche(a, b, filter.sortierung));
 }
 
@@ -122,10 +155,21 @@ export function berechneStatistik(auswahl: SeeAnsicht[]): Statistik {
   };
 }
 
+/**
+ * Längste Kälteserie des letzten Winters eines Sees.
+ * useKlimaAlle liefert nur den letzten Winter; falls doch mehrere vorliegen, zählt der jüngste.
+ */
+function kaelteserie(seeId: string, klima: Klimakennzahlen[]): number | null {
+  const letzter = klima
+    .filter((k) => k.seeId === seeId)
+    .reduce<Klimakennzahlen | null>((juengster, k) => (juengster === null || k.winter > juengster.winter ? k : juengster), null);
+  return letzter?.laengsteKaelteserie ?? null;
+}
+
 /** Schnittstelle für die GUI: gefilterte Seen samt Kennzahlen. */
-export function waehleSeen(seen: See[], messungen: SeeMessung[], filter: Filter): Auswahl {
+export function waehleSeen(seen: See[], messungen: SeeMessung[], klima: Klimakennzahlen[], filter: Filter): Auswahl {
   const auswahl = filtereSeen(
-    seen.map((see) => zuAnsicht(see, messungen)),
+    seen.map((see) => ({ ...zuAnsicht(see, messungen), laengsteKaelteserie: kaelteserie(see.id, klima) })),
     filter,
   );
   return {

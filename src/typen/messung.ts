@@ -7,7 +7,7 @@
  * @author   Peter Luckmann, Christoph Hauser
  */
 
-import type { Datenquelle } from './see';
+import type { Datenquelle } from './see.ts';
 
 /** Gültige Live-Messung einer See-Messstelle. Gemeinsames Format beider Landesquellen. */
 export interface SeeMessung {
