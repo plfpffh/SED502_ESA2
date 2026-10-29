@@ -10,7 +10,7 @@
 import { Outlet } from 'react-router';
 import Navigation from './Navigation';
 
-export default function Layout() {
+export default function Layout(): React.JSX.Element {
   return (
     <>
       <header className="kopfzeile">

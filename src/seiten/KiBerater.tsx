@@ -7,7 +7,7 @@
  * @author   Peter Luckmann (Platzhalter)
  */
 
-export default function KiBerater() {
+export default function KiBerater(): React.JSX.Element {
   return (
     <>
       <h1>KI-Berater</h1>

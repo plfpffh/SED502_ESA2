@@ -7,7 +7,7 @@
 
 import { Link } from 'react-router';
 
-export default function NichtGefunden() {
+export default function NichtGefunden(): React.JSX.Element {
   return (
     <>
       <h1>Seite nicht gefunden</h1>

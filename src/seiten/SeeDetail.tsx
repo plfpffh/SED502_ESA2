@@ -9,7 +9,7 @@
 
 import { useParams } from 'react-router';
 
-export default function SeeDetail() {
+export default function SeeDetail(): React.JSX.Element {
   const { id } = useParams();
   return (
     <>

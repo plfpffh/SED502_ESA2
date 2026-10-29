@@ -7,7 +7,7 @@
  * @author   Peter Luckmann (Platzhalter)
  */
 
-export default function Startseite() {
+export default function Startseite(): React.JSX.Element {
   return (
     <>
       <h1>Seen im Klimawandel</h1>

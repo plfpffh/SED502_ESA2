@@ -15,7 +15,7 @@ import SeeDetail from './seiten/SeeDetail';
 import Seenliste from './seiten/Seenliste';
 import Startseite from './seiten/Startseite';
 
-export default function App() {
+export default function App(): React.JSX.Element {
   return (
     <Routes>
       <Route element={<Layout />}>

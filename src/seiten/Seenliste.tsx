@@ -7,7 +7,7 @@
  * @author   Peter Luckmann
  */
 
-export default function Seenliste() {
+export default function Seenliste(): React.JSX.Element {
   return (
     <>
       <h1>Seen</h1>

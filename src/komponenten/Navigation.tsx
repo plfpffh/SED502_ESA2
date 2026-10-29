@@ -20,7 +20,7 @@ const EINTRAEGE: Eintrag[] = [
   { ziel: '/berater', text: 'KI-Berater' },
 ];
 
-export default function Navigation() {
+export default function Navigation(): React.JSX.Element {
   return (
     <nav aria-label="Hauptnavigation">
       <ul className="navigation">
