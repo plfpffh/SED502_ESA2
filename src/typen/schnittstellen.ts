@@ -4,12 +4,12 @@
  * Beispiel für eine spätere Implementierung:
  *   export const zuSeeMessungen: ZuSeeMessungen = (roh, seen) => { ... };
  */
-import type { See } from './see';
-import type { SeeMessung } from './messung';
-import type { Klimakennzahlen } from './klima';
-import type { Auswahl, Filter, SeeAnsicht } from './ansicht';
-import type { Nachricht } from './ai';
-import type { SeePrognose } from './prognose';
+import type { See } from './see.ts';
+import type { SeeMessung } from './messung.ts';
+import type { Klimakennzahlen } from './klima.ts';
+import type { Auswahl, Filter, SeeAnsicht } from './ansicht.ts';
+import type { Nachricht } from './ai.ts';
+import type { SeePrognose } from './prognose.ts';
 
 /**
  * Beide Landesadapter: Stationen über Quelle und Stationsnummer zuordnen;
