@@ -98,3 +98,219 @@ a {
   color: var(--text-leise);
   font-size: 0.875rem;
 }
+
+/* Nur für Screenreader sichtbar */
+.unsichtbar {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Filterformular der Seenliste */
+.filter {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.filter fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+  margin: 0;
+  padding: 12px 16px 16px;
+  border: 1px solid var(--rand);
+  border-radius: 8px;
+  background: var(--flaeche);
+}
+
+.filter legend {
+  padding-inline: 4px;
+  font-weight: 600;
+}
+
+.filter__aktivitaet {
+  align-items: center;
+}
+
+.filter__feld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 10rem;
+}
+
+.filter__feld > label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.filter__regler {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter__regler output {
+  min-width: 6ch;
+}
+
+.filter__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.filter__option input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+}
+
+.filter__hinweis {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-leise);
+  font-size: 0.9rem;
+}
+
+input[type='range']:disabled,
+select:disabled {
+  opacity: 0.5;
+}
+
+/* Seenliste und Seekarte */
+.seenliste {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 16px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.see {
+  height: 100%;
+  padding: 16px;
+  border: 1px solid var(--rand);
+  border-radius: 8px;
+  background: var(--flaeche);
+}
+
+.see h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.see__wert {
+  margin: 4px 0 12px;
+  color: var(--akzent);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.see__fakten {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 0 0 12px;
+}
+
+/* div um dt und dd: die Paare sollen im Raster wie direkte Kinder wirken */
+.see__fakten div {
+  display: contents;
+}
+
+.see__fakten dt {
+  color: var(--text-leise);
+}
+
+.see__fakten dd {
+  margin: 0;
+}
+
+.see summary {
+  color: var(--akzent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.see details ul {
+  margin: 8px 0 0;
+  padding-left: 1.2rem;
+}
+
+/* Kennzahlen der Auswahl als Kacheln */
+.kennzahlen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 16px;
+  margin: 0 0 24px;
+}
+
+.kennzahlen div {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--flaeche);
+}
+
+.kennzahlen dt {
+  color: var(--text-leise);
+  font-size: 0.9rem;
+}
+
+.kennzahlen dd {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* Lade- und Fehlerzustand */
+.ladeanimation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ladeanimation__kreis {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 3px solid var(--rand);
+  border-top-color: var(--akzent);
+  border-radius: 50%;
+  animation: drehen 0.8s linear infinite;
+}
+
+@keyframes drehen {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ladeanimation__kreis {
+    animation: none;
+  }
+}
+
+.fehlermeldung {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  border: 1px solid #b42318;
+  border-left-width: 6px;
+  border-radius: 8px;
+}
+
+.fehlermeldung p {
+  margin: 0;
+}
