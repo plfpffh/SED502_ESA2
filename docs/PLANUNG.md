@@ -106,7 +106,7 @@ useAI         ─fetch─► /api/ki (Streaming)    ─► LLM-API            (A
 
 > **Bewusste Abweichung vom Kompendium:** Modul 05 (Abschnitt 1.4) legt den Key als `VITE_…` ab und ruft die LLM-API direkt aus dem Browser auf. Damit steht der Key im ausgelieferten JavaScript und kann von jeder Person ausgelesen und missbraucht werden. Die Angabe verlangt, dass der Key „sicher in einer .env-Datei verwaltet und nicht im Repository“ ist. Beides erfüllen wir: Der Key liegt lokal in `.env` (nicht im Repository) und auf Vercel als Umgebungsvariable, gelesen wird er nur serverseitig. Diese Begründung steht auch im README.
 
-Lokal starten mit `npx vercel dev` (führt Vite **und** die `/api`-Funktionen aus). `npm run dev` allein kennt `/api` nicht.
+Lokal starten mit `npm run dev`. Das Plugin `vite-plugin-api.ts` führt die `/api`-Funktionen im Vite-Dev-Server aus, ein Vercel-Konto oder `vercel dev` ist dafür nicht nötig.
 
 ## 4. Vor dem Kick-off (jede Person)
 
