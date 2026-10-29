@@ -12,6 +12,7 @@
 import type { Filter } from '../typen/ansicht';
 import { KAELTETAGE_AUSWAHL, STANDARD_KAELTETAGE, STANDARD_MINDESTTEMPERATUR } from '../utils/filter';
 import { formatiereTemperatur } from '../utils/format';
+import { EIS_PFLICHTSATZ } from '../utils/kiRegeln';
 
 interface MindestwertFilterProps {
   filter: Filter;
@@ -79,9 +80,7 @@ export default function MindestwertFilter({ filter, onAendern }: MindestwertFilt
           </label>
         </span>
       </div>
-      <p className="filter__hinweis">
-        Klimatischer Hinweis, keine Freigabe. Eisflächen nur nach offizieller Freigabe durch die Gemeinde betreten.
-      </p>
+      <p className="filter__hinweis">Klimatischer Hinweis, keine Freigabe. {EIS_PFLICHTSATZ}</p>
     </>
   );
 }
