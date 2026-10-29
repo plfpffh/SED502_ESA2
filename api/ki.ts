@@ -13,8 +13,9 @@
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-// kostenloses Kontingent laut https://aistudio.google.com/docs/pricing (29.10.2026); gemini-2.5-flash gibt es für neue Keys nicht mehr
-export const STANDARD_MODELL = 'gemini-3.6-flash';
+// kostenloses Kontingent laut https://aistudio.google.com/docs/pricing (29.10.2026). Flash Lite erlaubt 500 Anfragen pro Tag,
+// gemini-3.6-flash nur 20 (Limits in AI Studio). gemini-2.5-flash gibt es für neue Keys nicht mehr.
+export const STANDARD_MODELL = 'gemini-3.5-flash-lite';
 export const MAX_NACHRICHTEN = 21; // Systemanweisung plus 20 Nachrichten Verlauf (maxNachrichten in useAI)
 export const MAX_ZEICHEN = 20_000;
 const MAX_AUSGABE_TOKENS = 2048;
