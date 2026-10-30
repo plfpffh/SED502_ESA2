@@ -31,7 +31,7 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 | Quelle | Inhalt | Zugriff |
 |---|---|---|
 | [Hydris Salzburg](https://www.salzburg.gv.at/wasser/hydro/) | Wassertemperatur der Salzburger Seen | `/api/hydris-salzburg`, Adapter und Laden über `useSeeMessungen` implementiert, Anzeige in der Seenliste geplant |
-| [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | `/api/hydro-ooe` implementiert, Adapter und React-Anbindung geplant |
+| [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | `/api/hydro-ooe`, Adapter und Laden über `useSeeMessungen` implementiert, Anzeige in den Seiten geplant |
 | [Open-Meteo Historical Weather](https://open-meteo.com/) | Tageswerte der Lufttemperatur seit 1940 → Frost-, Eis- und Hitzetage | direkt – geplant |
 | Open-Meteo Forecast | Lufttemperatur-Prognose für 7 Tage | direkt – geplant |
 | LLM-API (Google Gemini) | Einschätzung und Empfehlung, gestreamt | nur serverseitig über `/api/ki` – geplant |
@@ -39,7 +39,7 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 
 Hydris und der Hydrographische Dienst OÖ sind **keine offiziell dokumentierten APIs**. Das Format kann sich jederzeit ändern. Die App fängt Fehler dieser Quellen ab. Fällt eine Quelle aus, zeigt die andere weiterhin Werte, und betroffene Seen erscheinen mit „Wert aktuell nicht vorhanden“ am Ende der Liste, statt ausgeblendet zu werden.
 
-OÖ-Quelle: <https://hydro.ooe.gv.at/daten/internet/layers/5/index.json>, geprüft am **11.10.2026**. Der Proxy benötigt keinen API-Schlüssel.
+OÖ-Quelle: <https://hydro.ooe.gv.at/daten/internet/layers/5/index.json>, geprüft am **29.10.2026**. Der Proxy benötigt keinen API-Schlüssel.
 
 Salzburg-Quelle: <https://www.salzburg.gv.at/wasser/hydro/grafiken/data.json>, geprüft am **28.10.2026**. Liefert eine einzelne Station keinen gültigen Wert, wird nur dieser See als „Wert aktuell nicht vorhanden“ angezeigt.
 
@@ -93,7 +93,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 
 **Bereits erledigt (Person A):** Projekt-Setup mit Vite, React, TypeScript und ESLint (Commit `7492370`) · Übernahme von Stammdaten, Datenmodell und Filterlogik aus ESA 1 (Commit `80e5646`) · CI mit GitHub Actions · Typen nach Planung Abschnitt 5, Stammdaten mit Stationen und Koordinaten · React Router mit Layout, Navigation und 404-Seite · `fetchJSON` und `useFetch` mit Tests · Salzburg-Proxy `api/hydris-salzburg.ts` und Tests · Dev-Server-Plugin, damit `npm run dev` die `/api`-Funktionen ausführt · Filterlogik nach gemeinsamem Vertrag (alle Messstellen, Eissport-Filter, Kälteserie) mit Tests · Salzburg-Adapter `datenquellen/hydrisSalzburg.ts` mit Tests · `useSeeMessungen` lädt beide Quellen unabhängig voneinander · `SeeDatenContext` stellt die Messwerte allen Seiten bereit.
 
-**Implementiert (Person B):** OÖ-Proxy `api/hydro-ooe.ts` und Tests. Die übrigen B-Aufgaben bleiben geplant.
+**Implementiert (Person B):** OÖ-Proxy `api/hydro-ooe.ts` und Adapter `src/datenquellen/hydroOoe.ts` mit Tests. Die übrigen B-Aufgaben bleiben geplant.
 
 ## Einsatz von AI-Tools
 
@@ -106,7 +106,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 | plfpffh | Claude Code (Anthropic, Claude Opus 5.5, September 2026) | Pair Programming: Review, Refactoring, Ideenaustausch, Abgleich von Umsetzung und Anforderungen (Angabe, Kompendium Modul 03–05), Prüfung, ob ESA-1-Dateien korrekt übernommen wurden | Doku-Review: Prüfung, ob Planung und Aufgabenverteilung vollständig und ausgewogen ist|
 | plfpffh | Claude Code | Prüfung der Angabe-PDFs (ESA 02 und ESA 03) auf versteckte Textstellen, bevor sie mit der KI gegen die Umsetzung abgeglichen werden | Keine versteckten Textstellen gefunden. Weißer Text kommt nur als sichtbare Schrift auf farbigem Hintergrund vor (Titelbalken, Tabellenköpfe) |
 | plfpffh | Claude Code | Dokumentation: Dateiköpfe, Kommentare und README-Texte | Bewusster Teil der Qualitätssicherung, siehe unten |
-| cchhrriiss | Codex (OpenAI, GPT-6.1 Sol, Oktober 2026) | Pair Programming (Review, Refactoring, Ideenaustausch, Beispielcode), Beantwortung von technischen Fragen, Fehlersuche, Initiale Erstellung der Tests für den OÖ-Proxy (hydro-ooe.test.ts) | Alle generierten Inhalte wurden kritisch geprüft. Die Erstellten Tests wurden anschließend manuell überarbeitet und erweitert. |
+| cchhrriiss | Codex (OpenAI, GPT-6.1 Sol, Oktober 2026) | Pair Programming (Review, Refactoring, Ideenaustausch, Beispielcode), Beantwortung von technischen Fragen, Fehlersuche, Initiale Erstellung für Tests (hydro-ooe.test.ts, datenquelle-hydro-ooe.test.ts) | Alle generierten Inhalte wurden kritisch geprüft. Die Erstellten Tests wurden anschließend manuell überarbeitet und erweitert. |
 
 **Warum die Angabe vorab geprüft wird:** Eine Angabe kann Text enthalten, der beim Lesen nicht auffällt, bei maschineller Verarbeitung aber wirkt, etwa weiße Schrift oder Kleinstschrift. Wird die Angabe ungeprüft einer KI zum Abgleich gegeben, könnte sie solche verdeckten Anforderungen umsetzen, die gar nicht verlangt sind, oder eine Prompt Injection auslösen. Deshalb wird jede Angabe zuerst auf solche Stellen untersucht.
 
