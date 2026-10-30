@@ -23,18 +23,18 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 | React 19, TypeScript 6, Vite 8 | Grundgerüst der App | ✅ |
 | ESLint mit `react-hooks` | prüft u. a. vollständige Abhängigkeits-Arrays von `useEffect` | ✅ |
 | React Router 8 (Paket `react-router`, seit Version 7 ohne `-dom`) | Navigation zwischen den Seiten | ✅ |
-| Vercel Serverless Functions | Proxy für die Landesdaten, geschützter LLM-Aufruf | OÖ- und Salzburg-Proxy implementiert. LLM-Funktion und Deployment geplant |
+| Serverless Functions im Format von Vercel (`api/`) | Proxy für die Landesdaten, geschützter LLM-Aufruf | OÖ-, Salzburg- und KI-Proxy implementiert, lokal über `npm run dev`. Das Deployment auf Vercel ist Teil von ESA 3 |
 | Recharts | Diagramm der Frosttage pro Winter | geplant |
 
 ## APIs und Datenquellen
 
 | Quelle | Inhalt | Zugriff |
 |---|---|---|
-| [Hydris Salzburg](https://www.salzburg.gv.at/wasser/hydro/) | Wassertemperatur der Salzburger Seen | `/api/hydris-salzburg`, Adapter und Laden über `useSeeMessungen` implementiert, Anzeige in der Seenliste geplant |
-| [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | `/api/hydro-ooe`, Adapter und Laden über `useSeeMessungen` implementiert, Anzeige in den Seiten geplant |
+| [Hydris Salzburg](https://www.salzburg.gv.at/wasser/hydro/) | Wassertemperatur der Salzburger Seen | `/api/hydris-salzburg`, Adapter, Laden über `useSeeMessungen`, Anzeige in der Seenliste |
+| [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | `/api/hydro-ooe`, Adapter, Laden über `useSeeMessungen`, Anzeige in der Seenliste |
 | [Open-Meteo Historical Weather](https://open-meteo.com/) | Tageswerte der Lufttemperatur seit 1940 → Frost-, Eis- und Hitzetage | direkt – geplant |
 | Open-Meteo Forecast | Lufttemperatur-Prognose für 7 Tage | direkt – geplant |
-| LLM-API (Google Gemini) | Einschätzung und Empfehlung, gestreamt | nur serverseitig über `/api/ki` – geplant |
+| LLM-API (Google Gemini) | Einschätzung und Empfehlung, gestreamt | nur serverseitig über `/api/ki` (Streaming), im Browser über `useAI` |
 | Deutschsprachige Wikipedia | Fläche, Tiefe, Seehöhe (Stammdaten aus ESA 1) | statisch |
 
 Hydris und der Hydrographische Dienst OÖ sind **keine offiziell dokumentierten APIs**. Das Format kann sich jederzeit ändern. Die App fängt Fehler dieser Quellen ab. Fällt eine Quelle aus, zeigt die andere weiterhin Werte, und betroffene Seen erscheinen mit „Wert aktuell nicht vorhanden“ am Ende der Liste, statt ausgeblendet zu werden.
@@ -50,26 +50,28 @@ npm install
 npm run dev        # Frontend und /api-Funktionen, http://localhost:5173
 npm run build      # TypeScript-Prüfung + Produktions-Build
 npm run lint       # ESLint
-npm test           # Tests (Proxys, Adapter, Logik, fetchJSON, Dev-Server-Plugin)
+npm test           # Tests (Proxys, KI-Proxy, Adapter, Logik, Filter, Formatierung, fetchJSON, aiStream, Dev-Server-Plugin)
 ```
 
-Die Funktionen in `api/` laufen auf Vercel als Serverless Functions. Damit `npm run dev` sie auch lokal ausführt, ohne Vercel-Konto und ohne `vercel dev`, bindet [vite-plugin-api.ts](vite-plugin-api.ts) sie in den Vite-Dev-Server ein: `/api/<name>` ruft den Default-Export von `api/<name>.ts` mit Request und Response auf, genau wie auf Vercel. Variablen aus `.env` ohne `VITE_`-Präfix stehen dabei nur dem Dev-Server zur Verfügung, nie dem Browser.
+Die Funktionen in `api/` sind im Format von Vercel Serverless Functions geschrieben (Deployment in ESA 3). Damit `npm run dev` sie lokal ausführt, ohne Vercel-Konto und ohne `vercel dev`, bindet [vite-plugin-api.ts](vite-plugin-api.ts) sie in den Vite-Dev-Server ein: `/api/<name>` ruft den Default-Export von `api/<name>.ts` mit Request und Response auf, genau wie auf Vercel. Variablen aus `.env` ohne `VITE_`-Präfix stehen dabei nur dem Dev-Server zur Verfügung, nie dem Browser.
 
-Für die KI-Anbindung, sobald Person A die `.env.example` ergänzt hat (*geplant*):
+Für die KI-Anbindung wird ein eigener Gemini-API-Key aus [Google AI Studio](https://aistudio.google.com/app/apikey) benötigt:
 
 ```bash
 cp .env.example .env    # API-Key in .env eintragen, .env wird nie committet
 ```
 
+Ohne Key läuft die App trotzdem, nur `/api/ki` antwortet mit „Die KI ist nicht eingerichtet“.
+
 ## Sicherheit: Warum der API-Key nicht im Browser liegt
 
 Kompendium Modul 05 legt den LLM-Key als `VITE_…`-Variable ab und ruft die API direkt aus dem Browser auf. Alles, was in Vite mit `VITE_` beginnt, wird aber in das ausgelieferte JavaScript eingebaut und ist für jede Person lesbar, die die Seite öffnet. Wer den Key hat, kann auf unsere Kosten Anfragen stellen.
 
-Wir weichen deshalb bewusst ab: Der Key heißt `GEMINI_API_KEY` **ohne** `VITE_`-Präfix, liegt lokal in `.env` (per `.gitignore` ausgeschlossen) und auf Vercel als Umgebungsvariable und wird ausschließlich in der Serverless-Funktion `api/ki.ts` gelesen. Damit ist die Vorgabe der Angabe erfüllt („sicher in einer .env-Datei verwaltet und nicht im Repository“), und der Key verlässt nie den Server.
+Wir weichen deshalb bewusst ab: Der Key heißt `GEMINI_API_KEY` **ohne** `VITE_`-Präfix, liegt lokal in `.env` (per `.gitignore` ausgeschlossen) und wird ausschließlich in der Serverless-Funktion `api/ki.ts` gelesen. Damit ist die Vorgabe der Angabe erfüllt („sicher in einer .env-Datei verwaltet und nicht im Repository“), und der Key verlässt nie den Server.
 
 ## Qualitätssicherung: CI
 
-Bei jedem Push auf `main` und bei jedem Pull Request prüft GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) den Code mit `npm ci`, `npm run lint`, `npm test` und `npm run build`. Der Build enthält `tsc -b`, TypeScript-Fehler fallen also auf. Bei einem Pull Request wird der Stand **nach** dem Merge geprüft.
+CI/CD ist Thema von Kompendium Modul 07 (ESA 3). Die CI haben wir bewusst vorgezogen, damit jeder Pull Request automatisch geprüft wird. Bei jedem Push auf `main` und bei jedem Pull Request prüft GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) den Code mit `npm ci`, `npm run lint`, `npm test` und `npm run build`. Der Build enthält `tsc -b`, TypeScript-Fehler fallen also auf. Bei einem Pull Request wird der Stand **nach** dem Merge geprüft.
 
 Benötigt wird **Node.js ab 22.18** (in der CI: Node 24), weil die Tests TypeScript-Dateien direkt mit `node --test` ausführen.
 
@@ -82,16 +84,16 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 | | Person A – plfpffh | Person B – cchhrriiss |
 |---|---|---|
 | **Datenquelle** | Hydris Salzburg: Proxy `api/hydris-salzburg.ts`, Adapter `datenquellen/hydrisSalzburg.ts` | Hydro OÖ: Proxy `api/hydro-ooe.ts`, Adapter `datenquellen/hydroOoe.ts` |
-| **Hooks** | `fetchJSON` (generischer Wrapper), `useFetch`, `useSeeMessungen` (führt beide Landesquellen zusammen) | `useKlimatrend`, `useKlimaAlle` (Open-Meteo) |
+| **Hooks** | `fetchJSON` (generischer Wrapper), `useFetch`, `useSeeMessungen` (führt beide Landesquellen zusammen), `useSeenAuswahl` | `useKlimatrend`, `useKlimaAlle` (Open-Meteo) |
 | **Logik** | `utils/seen.ts` (aus ESA 1), Eissport-Filter | `utils/klima.ts` (Frost-, Eis-, Hitzetage, Kälteserie) |
 | **Seiten** | `Seenliste` (`/seen`) mit Filter und Umschalter Baden/Eissport | `SeeDetail` (`/seen/:id`), `KiBerater` (`/berater`), `Startseite` (`/`) |
-| **Komponenten** | `SeeKarte`, `SeenFilter`, `Ladeanimation`, `FehlerMeldung`, `Navigation` | `KlimaDiagramm`, `KiAntwort` |
+| **Komponenten** | `SeeKarte`, `SeenFilter`, `MindestwertFilter`, `Kennzahlen`, `Ladeanimation`, `FehlerMeldung`, `Navigation` | `KlimaDiagramm`, `KiAntwort` |
 | **KI** | `api/ki.ts` (serverseitig, Streaming), `utils/aiStream.ts`, `useAI` | KI-Einschätzung auf SeeDetail, KI-Berater |
 | **Rahmen** | Setup, React Router, `vercel.json`, `.env.example`, README-Endredaktion | – |
 
 **Gemeinsam:** Schnittstellen in `src/typen/` (erster Arbeitstag), System-Prompt der KI, Review jedes Pull Requests durch die jeweils andere Person.
 
-**Bereits erledigt (Person A):** Projekt-Setup mit Vite, React, TypeScript und ESLint (Commit `7492370`) · Übernahme von Stammdaten, Datenmodell und Filterlogik aus ESA 1 (Commit `80e5646`) · CI mit GitHub Actions · Typen nach Planung Abschnitt 5, Stammdaten mit Stationen und Koordinaten · React Router mit Layout, Navigation und 404-Seite · `fetchJSON` und `useFetch` mit Tests · Salzburg-Proxy `api/hydris-salzburg.ts` und Tests · Dev-Server-Plugin, damit `npm run dev` die `/api`-Funktionen ausführt · Filterlogik nach gemeinsamem Vertrag (alle Messstellen, Eissport-Filter, Kälteserie) mit Tests · Salzburg-Adapter `datenquellen/hydrisSalzburg.ts` mit Tests · `useSeeMessungen` lädt beide Quellen unabhängig voneinander · `SeeDatenContext` stellt die Messwerte allen Seiten bereit.
+**Bereits erledigt (Person A):** Projekt-Setup mit Vite, React, TypeScript und ESLint (Commit `7492370`) · Übernahme von Stammdaten, Datenmodell und Filterlogik aus ESA 1 (Commit `80e5646`) · CI mit GitHub Actions · Typen nach Planung Abschnitt 5, Stammdaten mit Stationen und Koordinaten · React Router mit Layout, Navigation und 404-Seite · `fetchJSON` und `useFetch` mit Tests · Salzburg-Proxy `api/hydris-salzburg.ts` und Tests · Dev-Server-Plugin, damit `npm run dev` die `/api`-Funktionen ausführt · Filterlogik nach gemeinsamem Vertrag (alle Messstellen, Eissport-Filter, Kälteserie) mit Tests · Salzburg-Adapter `datenquellen/hydrisSalzburg.ts` mit Tests · `useSeeMessungen` lädt beide Quellen unabhängig voneinander · `SeeDatenContext` stellt die Messwerte allen Seiten bereit · Seenliste mit kontrolliertem Filter, Umschalter Baden/Eissport, Seekarten, Kennzahlen sowie Lade- und Fehleranzeige · KI-Technik: `api/ki.ts` streamt Gemini-Antworten als Text, `utils/aiStream.ts` und `useAI` mit Abbrechen und verständlichen Fehlermeldungen, `.env.example`, alles mit Tests.
 
 **Implementiert (Person B):** OÖ-Proxy `api/hydro-ooe.ts` und Adapter `src/datenquellen/hydroOoe.ts` mit Tests. Die übrigen B-Aufgaben bleiben geplant.
 
@@ -103,7 +105,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 
 | Person | Tool | wofür | Ergebnis / eigene Prüfung |
 |---|---|---|---|
-| plfpffh | Claude Code (Anthropic, Claude Opus 5.5, September 2026) | Pair Programming: Review, Refactoring, Ideenaustausch, Abgleich von Umsetzung und Anforderungen (Angabe, Kompendium Modul 03–05), Prüfung, ob ESA-1-Dateien korrekt übernommen wurden | Doku-Review: Prüfung, ob Planung und Aufgabenverteilung vollständig und ausgewogen ist|
+| plfpffh | Claude Code (Anthropic, Claude Opus 5.5, September 2026 und Oktober 2026) | Pair Programming: Review, Refactoring, Ideenaustausch, Abgleich von Umsetzung und Anforderungen (Angabe, Kompendium Modul 03–05), Prüfung, ob ESA-1-Dateien korrekt übernommen wurden | Doku-Review: Prüfung, ob Planung und Aufgabenverteilung vollständig und ausgewogen ist|
 | plfpffh | Claude Code | Prüfung der Angabe-PDFs (ESA 02 und ESA 03) auf versteckte Textstellen, bevor sie mit der KI gegen die Umsetzung abgeglichen werden | Keine versteckten Textstellen gefunden. Weißer Text kommt nur als sichtbare Schrift auf farbigem Hintergrund vor (Titelbalken, Tabellenköpfe) |
 | plfpffh | Claude Code | Dokumentation: Dateiköpfe, Kommentare und README-Texte | Bewusster Teil der Qualitätssicherung, siehe unten |
 | cchhrriiss | Codex (OpenAI, GPT-6.1 Sol, Oktober 2026) | Pair Programming (Review, Refactoring, Ideenaustausch, Beispielcode), Beantwortung von technischen Fragen, Fehlersuche, Initiale Erstellung für Tests (hydro-ooe.test.ts, datenquelle-hydro-ooe.test.ts) | Alle generierten Inhalte wurden kritisch geprüft. Die Erstellten Tests wurden anschließend manuell überarbeitet und erweitert. |
@@ -115,6 +117,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 **In der App** (*geplant*)
 
 - **Anbieter:** Google Gemini (kostenloses Kontingent). Google darf Eingaben im kostenlosen Kontingent zur Verbesserung seiner Produkte verwenden, daher sollen Nutzer\*innen keine persönlichen Daten eingeben.
-- **Modell:** offen
+- **Modell:** `gemini-3.5-flash-lite` (kostenloses Kontingent), über `GEMINI_MODEL` änderbar. Gewählt wegen der Limits im kostenlosen Kontingent (laut Google AI Studio, Stand 29.10.2026): 15 Anfragen pro Minute und 500 pro Tag. `gemini-3.6-flash` erlaubt nur 5 pro Minute und 20 pro Tag. Beide Modelle hielten in unseren Tests die KI-Regeln ein.
+- **Grenzen (umgesetzt in `api/ki.ts`):** höchstens 20 Nachrichten Verlauf plus Systemanweisung, 20.000 Zeichen pro Anfrage und 2048 Tokens pro Antwort. Der Browser kann diese Grenzen nicht ändern. Fehler der LLM-API werden nie als roher Text angezeigt, sondern als verständliche Meldung (z. B. bei zu vielen Anfragen).
 - **Welche Daten gehen an die LLM-API:** aktuelle Messwerte und berechnete Klimakennzahlen der Seen sowie im KI-Berater die Eingabe der Nutzer\*innen (z. B. Wohnort und Vorhaben). Es werden keine Konten oder personenbezogenen Daten gespeichert. Nutzer\*innen sollten keine persönlichen Daten eingeben.
 - **Regeln für die KI:** Sie interpretiert nur die mitgelieferten Zahlen, erfindet keine Messwerte oder Studien, schätzt fehlende Werte nicht und erklärt Eis nie für sicher. Alle Antworten sind als **KI-generiert** gekennzeichnet.
