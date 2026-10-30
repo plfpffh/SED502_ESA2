@@ -1,7 +1,7 @@
 # ESA 2 – Planung „Seen im Klimawandel“
 
 Gruppenarbeit SED502 Front-End Development · 2 Personen · 40 Punkte
-Abgabe **Sa, 05.12.2026, 23:59** im Online-Campus · Gruppe melden bis **Mi, 25.11.2026**
+Abgabe **Sa, 05.12.2026, 23:59** im Online-Campus
 
 | Rolle | Name | Schwerpunkt |
 |---|---|---|
@@ -104,7 +104,7 @@ useAI         ─fetch─► /api/ki (Streaming)    ─► LLM-API            (A
 1. Die beiden Landesquellen erlauben keinen Browser-Zugriff (kein CORS).
 2. Der **API-Key bleibt auf dem Server.** Alles, was in Vite mit `VITE_` beginnt, landet im ausgelieferten JavaScript und ist für jede Person sichtbar, auch wenn es in `.env` steht. Die Variable heißt deshalb `GEMINI_API_KEY` **ohne** `VITE_`-Präfix und wird nur in `api/ki.ts` gelesen.
 
-> **Bewusste Abweichung vom Kompendium:** Modul 05 (Abschnitt 1.4) legt den Key als `VITE_…` ab und ruft die LLM-API direkt aus dem Browser auf. Damit steht der Key im ausgelieferten JavaScript und kann von jeder Person ausgelesen und missbraucht werden. Die Angabe verlangt, dass der Key „sicher in einer .env-Datei verwaltet und nicht im Repository“ ist. Beides erfüllen wir: Der Key liegt lokal in `.env` (nicht im Repository) und auf Vercel als Umgebungsvariable, gelesen wird er nur serverseitig. Diese Begründung steht auch im README.
+> **Bewusste Abweichung vom Kompendium:** Modul 05 (Abschnitt 1.4) legt den Key als `VITE_…` ab und ruft die LLM-API direkt aus dem Browser auf. Damit steht der Key im ausgelieferten JavaScript und kann von jeder Person ausgelesen und missbraucht werden. Die Angabe verlangt, dass der Key „sicher in einer .env-Datei verwaltet und nicht im Repository“ ist. Beides erfüllen wir: Der Key liegt lokal in `.env` (nicht im Repository) und wird nur serverseitig gelesen. Mit dem Deployment in ESA 3 kommt er auf Vercel als Umgebungsvariable dazu. Diese Begründung steht auch im README.
 
 Lokal starten mit `npm run dev`. Das Plugin `vite-plugin-api.ts` führt die `/api`-Funktionen im Vite-Dev-Server aus, ein Vercel-Konto oder `vercel dev` ist dafür nicht nötig.
 
@@ -112,11 +112,10 @@ Lokal starten mit `npm run dev`. Das Plugin `vite-plugin-api.ts` führt die `/ap
 
 - [ ] GitHub-Konto; unter *Settings → Emails* „Keep my email addresses private“ aktivieren und lokal die `…@users.noreply.github.com`-Adresse setzen (`git config user.email …`). Sonst steht die private oder berufliche Adresse in jedem Commit des öffentlichen Repos.
 - [ ] Node.js (LTS) installiert, `node -v` funktioniert
-- [ ] Vercel-Konto (kostenlos, mit GitHub anmelden), `npx vercel login` einmal ausführen
 - [ ] Eigene Datenquelle im Browser aufrufen und prüfen, ob URL und Feldnamen aus Abschnitt 3 noch stimmen
 - [x] LLM-Anbieter: **Google Gemini** (kostenloses Kontingent), entschieden am 28.10.2026 (Abschnitt 7)
-- [ ] A und B: je einen eigenen Gemini-API-Key in Google AI Studio erzeugen (nicht weitergeben); A trägt einen davon auf Vercel ein
-- [ ] Kompendium Modul 03–05 griffbereit (fetch, React, useAI-Hook)
+- [ ] A und B: je einen eigenen Gemini-API-Key in Google AI Studio erzeugen (nicht weitergeben) und lokal in `.env` eintragen
+- [ ] Kompendium Modul 01–05 griffbereit (ESA 2 baut auf allen fünf Modulen auf; Schwerpunkt fetch, React, useAI-Hook)
 
 ## 5. Gemeinsamer Vertrag (am Kick-off gemeinsam, erster Commit)
 
@@ -319,28 +318,27 @@ Jede Person übernimmt **einen vertikalen Strang**: Proxy → Adapter → Hook �
 - ✅ Vite + React + TypeScript + ESLint, `.gitignore` inkl. `.env` und `.vercel` (Commit `7492370`)
 - ✅ Stammdaten, Datenmodell und Filterlogik aus ESA 1 unverändert übernommen (Commit `80e5646`)
 - ✅ B (`cchhrriiss`) als Collaborator eingeladen
-- ☐ CI mit GitHub Actions (`.github/workflows/ci.yml`: Lint, Tests, Build bei jedem Pull Request, Kompendium Modul 07)
-- ☐ `main` schützen (Merge nur per Pull Request, 1 Review durch die andere Person, CI muss grün sein)
-- ☐ Vercel mit dem Repository verbinden (CD: Vorschau-URL je Pull Request, `main` wird automatisch veröffentlicht)
-- ☐ React Router, `vercel.json` (SPA-Rewrite), `.env.example`
-- ☐ `App.tsx` (Routen), `komponenten/Navigation.tsx`, `seiten/NichtGefunden.tsx`
-- ☐ `daten/seen.ts` und `utils/seen.ts` an den bereits angelegten Vertrag anpassen (konkrete Schritte in Abschnitt 5)
+- ✅ CI mit GitHub Actions (`.github/workflows/ci.yml`: Lint, Tests, Build bei jedem Pull Request). Thema aus Kompendium Modul 07, bewusst vorgezogen, damit jeder Pull Request automatisch geprüft wird
+- ✅ `main` schützen (Merge nur per Pull Request, 1 Review durch die andere Person, CI muss grün sein)
+- ✅ React Router, `vercel.json` (SPA-Rewrite, Vorbereitung für ESA 3), `.env.example`
+- ✅ `App.tsx` (Routen), `komponenten/Navigation.tsx`, `seiten/NichtGefunden.tsx`
+- ✅ `daten/seen.ts` und `utils/seen.ts` an den bereits angelegten Vertrag anpassen (konkrete Schritte in Abschnitt 5)
 
 **Salzburg-Strang**
-- `api/hydris-salzburg.ts` – Proxy, liefert nur Seen-Stationen
-- `src/datenquellen/hydrisSalzburg.ts` – Adapter → `SeeMessung[]`
-- `src/utils/fetchJSON.ts` – generischer Wrapper mit Prüfung auf `antwort.ok` (Modul 03), Grundlage für `useFetch` und alle Adapter
-- `src/hooks/useFetch.ts` – generischer Hook mit loading/success/error
-- `src/hooks/useSeeMessungen.ts` – führt Salzburg + OÖ zusammen (nutzt den Adapter von B)
+- ✅ `api/hydris-salzburg.ts` – Proxy, liefert nur Seen-Stationen
+- ✅ `src/datenquellen/hydrisSalzburg.ts` – Adapter → `SeeMessung[]`
+- ✅ `src/utils/fetchJSON.ts` – generischer Wrapper mit Prüfung auf `antwort.ok` (Modul 03), Grundlage für `useFetch` und alle Adapter
+- ✅ `src/hooks/useFetch.ts` – generischer Hook mit loading/success/error
+- ✅ `src/hooks/useSeeMessungen.ts` – führt Salzburg + OÖ zusammen (nutzt den Adapter von B)
 
 **Seiten und Komponenten**
-- `seiten/Seenliste.tsx` (`/seen`) – Liste, Filter, Sortierung, Kennzahlen; Umschalter „Baden / Eissport“ (Abschnitt 5): Baden wie in ESA 1 (Regler 0–30 °C plus Checkbox „alle“), Eissport mit Auswahl der Kältetage; `filtereSeen()` in `utils/seen.ts` um den Eissport-Filter und die Sortierung „Kälteserie“ erweitern
-- `komponenten/SeeKarte.tsx` (Karte **eines** Sees), `SeenFilter.tsx`, `Ladeanimation.tsx`, `FehlerMeldung.tsx`
+- ✅ `seiten/Seenliste.tsx` (`/seen`) – Liste, Filter, Sortierung, Kennzahlen; Umschalter „Baden / Eissport“ (Abschnitt 5): Baden wie in ESA 1 (Regler 0–30 °C plus Checkbox „alle“), Eissport mit Auswahl der Kältetage; `filtereSeen()` in `utils/seen.ts` um den Eissport-Filter und die Sortierung „Kälteserie“ erweitern
+- ✅ `komponenten/SeeKarte.tsx` (Karte **eines** Sees), `SeenFilter.tsx`, `Ladeanimation.tsx`, `FehlerMeldung.tsx`
 
 **KI-Technik**
-- `api/ki.ts` – LLM-Aufruf mit Streaming, Key nur hier
-- `src/utils/aiStream.ts` – `chatStream()` liest den Stream von `/api/ki` Chunk für Chunk (Modul 05, Abschnitt 3.2)
-- `src/hooks/useAI.ts` – verwaltet Verlauf, Streaming-Zustand und Fehler, nutzt `chatStream()`
+- ✅ `api/ki.ts` – LLM-Aufruf mit Streaming, Key nur hier
+- ✅ `src/utils/aiStream.ts` – `chatStream()` liest den Stream von `/api/ki` Chunk für Chunk (Modul 05, Abschnitt 3.2)
+- ✅ `src/hooks/useAI.ts` – verwaltet Verlauf, Streaming-Zustand und Fehler, nutzt `chatStream()`
 
 ### Person B – Oberösterreich, Klimatrend, Seedetail, KI-Berater
 
@@ -449,9 +447,13 @@ Das Thema berührt Sicherheit (Eis) und Klimadaten. Fachliche Genauigkeit hat de
 
 ## 12. Schon an ESA 3 denken
 
-Details in der ESA-3-Planung (folgt nach Abgabe von ESA 2). Bereits in ESA 2 beachten:
+Die ESAs bauen aufeinander auf: ESA 2 belegt die Kompendium-Module 01–05, ESA 3 die Module 01–08. Themen aus Modul 06–08 (Responsive Design und WCAG, Code Splitting, Lighthouse, Deployment) setzen wir deshalb erst in ESA 3 um. Details in der ESA-3-Planung (folgt nach Abgabe von ESA 2).
 
-- `vercel.json` mit SPA-Rewrite von Anfang an
+**Erst in ESA 3:** Vercel mit dem Repository verbinden (Vorschau-URL je Pull Request, `main` wird automatisch veröffentlicht) und `GEMINI_API_KEY` dort als Umgebungsvariable eintragen (Modul 07).
+
+Bereits in ESA 2 beachten:
+
+- `vercel.json` mit SPA-Rewrite von Anfang an (✅ vorhanden), `api/`-Funktionen im Format von Vercel Serverless Functions (✅)
 - Jede Seite als Default-Export, damit sie später mit `React.lazy()` geladen werden kann
 - `useFetch` in mehreren Komponenten nutzen → erfüllt „Custom Hook in mehr als einer Komponente“
 - Fehlermeldungen von Anfang an benutzerfreundlich („Die Messwerte aus Oberösterreich sind gerade nicht erreichbar.“) statt roher API-Fehler
