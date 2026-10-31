@@ -50,6 +50,25 @@ function tageImZeitraum(tage: Map<string, KlimaTag>, von: string, bis: string): 
  */
 export function berechneKlimakennzahlen(seeId: string, startjahr: number, tage: KlimaTag[]): Klimakennzahlen | null {
   const nachDatum = new Map(tage.map((tag) => [tag.datum, tag]));
+  return kennzahlenFuerWinter(seeId, startjahr, nachDatum);
+}
+
+/** Wertet alle vollständigen Winter aus. */
+export function berechneKlimatrend(
+  seeId: string, startjahr: number, endjahr: number, tage: KlimaTag[],
+): Klimakennzahlen[] {
+  const nachDatum = new Map(tage.map((tag) => [tag.datum, tag]));
+  const kennzahlen: Klimakennzahlen[] = [];
+  for (let jahr = startjahr; jahr <= endjahr; jahr++) {
+    const winter = kennzahlenFuerWinter(seeId, jahr, nachDatum);
+    if (winter !== null) kennzahlen.push(winter);
+  }
+  return kennzahlen;
+}
+
+function kennzahlenFuerWinter(
+  seeId: string, startjahr: number, nachDatum: Map<string, KlimaTag>,
+): Klimakennzahlen | null {
   const winter = tageImZeitraum(nachDatum, `${startjahr}-12-01`, `${startjahr + 1}-03-01`);
   const sommer = tageImZeitraum(nachDatum, `${startjahr}-06-01`, `${startjahr}-09-01`);
   if (!winter || !sommer) return null;

@@ -10,7 +10,7 @@
 import type { See } from '../typen/see.ts';
 import type { KlimaTag } from '../utils/klima.ts';
 import type { Klimakennzahlen } from '../typen/klima.ts';
-import { berechneKlimakennzahlen } from '../utils/klima.ts';
+import { berechneKlimakennzahlen, berechneKlimatrend, letzterAbgeschlossenerWinter } from '../utils/klima.ts';
 import { fetchJSON } from '../utils/fetchJSON.ts';
 
 const ARCHIV_URL = 'https://archive-api.open-meteo.com/v1/archive';
@@ -98,6 +98,27 @@ export async function ladeWinterKennzahlen(
     kennzahlen,
     fehler: fehlendeSeen.length > 0
       ? `Für folgende Seen sind die Klimadaten nicht vollständig verfügbar: ${fehlendeSeen.join(', ')}.`
+      : null,
+  };
+}
+
+/** Laden der Klima-Historie eines Sees. (Ohne den noch laufenden Winter.) */
+export async function ladeKlimatrend(
+  see: See, signal?: AbortSignal, heute = new Date(),
+): Promise<{ kennzahlen: Klimakennzahlen[]; fehler: string | null }> {
+  signal?.throwIfAborted();
+  const startjahr = 1950;
+  const endjahr = letzterAbgeschlossenerWinter(heute);
+  const bis = new Date(Date.UTC(endjahr + 1, 2, 0)).toISOString().slice(0, 10);
+  const tage = await ladeKlimatage(see, `${startjahr}-06-01`, bis, signal);
+  signal?.throwIfAborted();
+
+  const kennzahlen = berechneKlimatrend(see.id, startjahr, endjahr, tage);
+  const fehlendeWinter = endjahr - startjahr + 1 - kennzahlen.length;
+  return {
+    kennzahlen,
+    fehler: fehlendeWinter > 0
+      ? `Für ${fehlendeWinter} Winter sind die Klimadaten nicht vollständig verfügbar. Diese Zeiträume wurden nicht ausgewertet.`
       : null,
   };
 }
