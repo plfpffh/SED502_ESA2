@@ -303,7 +303,7 @@ export function useKlimaAlle(seen: See[]): { kennzahlen: Klimakennzahlen[]; isLa
 export function usePrognose(seen: See[]): { prognosen: SeePrognose[]; isLaden: boolean; fehler: string | null; neuLaden: () => void };
 ```
 
-Open-Meteo einmal pro See abfragen (14 Anfragen) oder, falls die API mehrere Koordinaten in einer Anfrage erlaubt, gebündelt. **Vor Beginn in der Open-Meteo-Doku prüfen (B).**
+**Geprüft am 30.10.2026:** Open-Meteo unterstützt mehrere Koordinaten pro Anfrage und liefert dann ein Array von Antworten. Für dieses Projekt wird pro See abgefragt (14 Anfragen für die Seenliste), damit einzelne Fehler unabhängig behandelt werden können. `useKlimaAlle` soll dafür `Promise.allSettled` verwenden. Das Archiv wird durchgehend mit `models=era5`, °C und `timezone=Europe/Vienna` abgefragt. Open-Meteo empfiehlt ERA5 oder ERA5-Land für konsistente Vergleiche über Jahrzehnte. Quelle: [Historical Weather API](https://open-meteo.com/en/docs/historical-weather-api).
 
 **Offen, am Kick-off entscheiden:** Grenzen der Badeeinschätzung. ESA 1 verwendet ab 24 °C „warm“, ab 20 °C „angenehm“, ab 16 °C „frisch“, darunter „kalt“ (`badeEinschaetzung()` in `utils/seen.ts`).
 
