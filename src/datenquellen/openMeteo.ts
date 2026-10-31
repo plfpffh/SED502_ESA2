@@ -11,10 +11,12 @@ import type { See } from '../typen/see.ts';
 import type { KlimaTag } from '../utils/klima.ts';
 import type { Klimakennzahlen } from '../typen/klima.ts';
 import { berechneKlimakennzahlen, berechneKlimatrend, letzterAbgeschlossenerWinter } from '../utils/klima.ts';
-import { fetchJSON } from '../utils/fetchJSON.ts';
+import { fetchJSON, HttpFehler } from '../utils/fetchJSON.ts';
+import { klimaCacheSchluessel, liesKlimaCache, speichereKlimaCache } from '../utils/klimaCache.ts';
 
 const ARCHIV_URL = 'https://archive-api.open-meteo.com/v1/archive';
 const FORMATFEHLER = 'Die Klimadaten von Open-Meteo haben ein unerwartetes Format.';
+const LIMITMELDUNG = 'Open-Meteo Anfragelimit erreicht, bitte warten und später erneut versuchen.';
 
 function istObjekt(wert: unknown): wert is Record<string, unknown> {
   return wert !== null && typeof wert === 'object' && !Array.isArray(wert);
@@ -68,8 +70,15 @@ export async function ladeKlimatage(see: See, von: string, bis: string, signal?:
     temperature_unit: 'celsius',
     models: 'era5',
   });
-  const roh = await fetchJSON<unknown>(`${ARCHIV_URL}?${parameter}`, { signal });
-  return zuKlimaTagen(roh);
+  try {
+    const roh = await fetchJSON<unknown>(`${ARCHIV_URL}?${parameter}`, { signal });
+    return zuKlimaTagen(roh);
+  } catch (fehler) {
+    if (fehler instanceof HttpFehler && fehler.status === 429) {
+      throw new HttpFehler(429, LIMITMELDUNG);
+    }
+    throw fehler;
+  }
 }
 
 /** Ein Winter pro See und der Sommer davor. */
@@ -80,13 +89,22 @@ export async function ladeWinterKennzahlen(
   const von = `${startjahr}-06-01`;
   const bis = new Date(Date.UTC(startjahr + 1, 2, 0)).toISOString().slice(0, 10);
   const ergebnisse = await Promise.allSettled(seen.map(async (see) => {
+    const schluessel = klimaCacheSchluessel(see, startjahr, startjahr);
+    const gespeichert = liesKlimaCache(schluessel);
+    if (gespeichert) return gespeichert[0];
     const tage = await ladeKlimatage(see, von, bis, signal);
-    return berechneKlimakennzahlen(see.id, startjahr, tage);
+    signal?.throwIfAborted();
+    const kennzahl = berechneKlimakennzahlen(see.id, startjahr, tage);
+    if (kennzahl) speichereKlimaCache(schluessel, [kennzahl]);
+    return kennzahl;
   }));
   signal?.throwIfAborted();
 
   const kennzahlen: Klimakennzahlen[] = [];
   const fehlendeSeen: string[] = [];
+  const limitErreicht = ergebnisse.some((ergebnis) =>
+    ergebnis.status === 'rejected' && ergebnis.reason instanceof HttpFehler && ergebnis.reason.status === 429,
+  );
   ergebnisse.forEach((ergebnis, index) => {
     if (ergebnis.status === 'fulfilled' && ergebnis.value !== null) {
       kennzahlen.push(ergebnis.value);
@@ -97,7 +115,7 @@ export async function ladeWinterKennzahlen(
   return {
     kennzahlen,
     fehler: fehlendeSeen.length > 0
-      ? `Für folgende Seen sind die Klimadaten nicht vollständig verfügbar: ${fehlendeSeen.join(', ')}.`
+      ? `${limitErreicht ? `${LIMITMELDUNG} ` : ''}Für folgende Seen sind die Klimadaten nicht vollständig verfügbar: ${fehlendeSeen.join(', ')}.`
       : null,
   };
 }
@@ -109,12 +127,20 @@ export async function ladeKlimatrend(
   signal?.throwIfAborted();
   const startjahr = 1950;
   const endjahr = letzterAbgeschlossenerWinter(heute);
+  const schluessel = klimaCacheSchluessel(see, startjahr, endjahr);
+  const gespeichert = liesKlimaCache(schluessel);
+  if (gespeichert) return { kennzahlen: gespeichert, fehler: null };
   const bis = new Date(Date.UTC(endjahr + 1, 2, 0)).toISOString().slice(0, 10);
   const tage = await ladeKlimatage(see, `${startjahr}-06-01`, bis, signal);
   signal?.throwIfAborted();
 
   const kennzahlen = berechneKlimatrend(see.id, startjahr, endjahr, tage);
   const fehlendeWinter = endjahr - startjahr + 1 - kennzahlen.length;
+  if (fehlendeWinter === 0) {
+    speichereKlimaCache(schluessel, kennzahlen);
+    const letzterWinter = kennzahlen.at(-1);
+    if (letzterWinter) speichereKlimaCache(klimaCacheSchluessel(see, endjahr, endjahr), [letzterWinter]);
+  }
   return {
     kennzahlen,
     fehler: fehlendeWinter > 0

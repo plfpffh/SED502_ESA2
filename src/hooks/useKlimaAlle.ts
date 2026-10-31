@@ -28,6 +28,10 @@ export function useKlimaAlle(seen: See[]): ReturnType<UseKlimaAlle> {
     const controller = new AbortController();
 
     const laden = async (): Promise<void> => {
+      // Verhindert von unnötigen API Aufrufen.
+      await Promise.resolve();
+      if (controller.signal.aborted) return;
+      
       setIsLaden(true);
       setErgebnis({ kennzahlen: [], fehler: null });
       try {

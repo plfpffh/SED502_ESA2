@@ -39,6 +39,8 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 
 Hydris und der Hydrographische Dienst OÖ sind **keine offiziell dokumentierten APIs**. Das Format kann sich jederzeit ändern. Die App fängt Fehler dieser Quellen ab. Fällt eine Quelle aus, zeigt die andere weiterhin Werte, und betroffene Seen erscheinen mit „Wert aktuell nicht vorhanden“ am Ende der Liste, statt ausgeblendet zu werden.
 
+Erfolgreich abgerufene historische Klimakennzahlen bleiben für 24 Stunden im Browser zwischengespeichert. Dadurch sind beim Seitenwechsel und Neuladen weniger erneute Open-Meteo-Abrufe nötig. Lange Zeiträume werden im Open-Meteo-Kontingent als mehrere API-Aufrufe angerechnet. Bei HTTP 429 weist die App auf das Anfragelimit hin.
+
 OÖ-Quelle: <https://hydro.ooe.gv.at/daten/internet/layers/5/index.json>, geprüft am **29.10.2026**. Der Proxy benötigt keinen API-Schlüssel.
 
 Salzburg-Quelle: <https://www.salzburg.gv.at/wasser/hydro/grafiken/data.json>, geprüft am **28.10.2026**. Liefert eine einzelne Station keinen gültigen Wert, wird nur dieser See als „Wert aktuell nicht vorhanden“ angezeigt.

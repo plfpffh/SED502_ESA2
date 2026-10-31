@@ -36,9 +36,11 @@ function SeeDetailInhalt({ see }: { see: See }): React.JSX.Element {
         {isLaden ? <Ladeanimation text="Klimatrend wird geladen …" /> : (
           <>
             {fehler && <FehlerMeldung meldung={fehler} onErneutVersuchen={neuLaden} />}
-            <Suspense fallback={<Ladeanimation text="Diagramm wird geladen …" />}>
-              <KlimaDiagramm seeName={see.name} kennzahlen={kennzahlen} />
-            </Suspense>
+            {kennzahlen.length > 0 && (
+              <Suspense fallback={<Ladeanimation text="Diagramm wird geladen …" />}>
+                <KlimaDiagramm seeName={see.name} kennzahlen={kennzahlen} />
+              </Suspense>
+            )}
           </>
         )}
       </section>
