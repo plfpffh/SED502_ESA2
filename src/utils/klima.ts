@@ -66,6 +66,19 @@ export function berechneKlimatrend(
   return kennzahlen;
 }
 
+/** Fehlende Winter mit null füllen. */
+export function frosttageVerlauf(
+  kennzahlen: Klimakennzahlen[], startjahr: number, endjahr: number,
+): { winter: string; frosttage: number | null }[] {
+  const nachWinter = new Map(kennzahlen.map((wert) => [wert.winter, wert.frosttage]));
+  const verlauf: { winter: string; frosttage: number | null }[] = [];
+  for (let jahr = startjahr; jahr <= endjahr; jahr++) {
+    const winter = `${jahr}/${String(jahr + 1).slice(-2)}`;
+    verlauf.push({ winter, frosttage: nachWinter.get(winter) ?? null });
+  }
+  return verlauf;
+}
+
 function kennzahlenFuerWinter(
   seeId: string, startjahr: number, nachDatum: Map<string, KlimaTag>,
 ): Klimakennzahlen | null {

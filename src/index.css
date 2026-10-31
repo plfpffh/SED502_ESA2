@@ -314,3 +314,69 @@ select:disabled {
 .fehlermeldung p {
   margin: 0;
 }
+
+/* Klimadiagramm und ergänzende Datentabelle */
+.klimadiagramm {
+  min-width: 0;
+  margin: 0 0 24px;
+}
+
+.klimadiagramm figcaption {
+  font-weight: 600;
+}
+
+.klimadiagramm__grafik {
+  height: 320px;
+  margin-block: 16px;
+}
+
+.klimadiagramm .recharts-cartesian-axis-tick-value {
+  fill: var(--text-leise);
+  font-size: 0.75rem;
+}
+
+.klimadiagramm .recharts-cartesian-axis-line,
+.klimadiagramm .recharts-cartesian-axis-tick-line {
+  stroke: var(--rand);
+}
+
+.klimadiagramm__hinweis {
+  color: var(--text-leise);
+  font-size: 0.875rem;
+}
+
+.klimadiagramm summary {
+  color: var(--akzent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.klimadiagramm__tabelle {
+  max-height: 22rem;
+  margin-top: 12px;
+  overflow: auto;
+  border: 1px solid var(--rand);
+  border-radius: 6px;
+}
+
+.klimadiagramm table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.klimadiagramm caption {
+  padding: 8px;
+  background: var(--flaeche);
+}
+
+.klimadiagramm th,
+.klimadiagramm td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rand);
+  text-align: left;
+}
+
+.klimadiagramm td {
+  text-align: right;
+}
