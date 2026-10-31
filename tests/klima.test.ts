@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { berechneKlimakennzahlen } from '../src/utils/klima.ts';
+import { berechneKlimakennzahlen, letzterAbgeschlossenerWinter } from '../src/utils/klima.ts';
 import type { KlimaTag } from '../src/utils/klima.ts';
 
 /** Vollständiges Kalenderjahr und Folgewinter, zunächst ohne Frost oder Hitze. */
@@ -20,6 +20,20 @@ function aendereTag(tage: KlimaTag[], datum: string, werte: Partial<Omit<KlimaTa
   assert.ok(tag, `Testdatum ${datum} fehlt`);
   Object.assign(tag, werte);
 }
+
+test('Klima: letzter abgeschlossener Winter wechselt erst am 1. März in Österreich', () => {
+  for (const datum of ['2026-01-01T12:00:00+01:00', '2026-02-28T23:59:59+01:00']) {
+    assert.equal(letzterAbgeschlossenerWinter(new Date(datum)), 2024);
+  }
+  for (const datum of ['2026-03-01T00:00:00+01:00', '2026-10-31T12:00:00+01:00', '2026-12-31T23:59:59+01:00']) {
+    assert.equal(letzterAbgeschlossenerWinter(new Date(datum)), 2025);
+  }
+});
+
+test('Klima: auch im Schaltjahr ist der Winter erst nach dem 29. Februar abgeschlossen', () => {
+  assert.equal(letzterAbgeschlossenerWinter(new Date('2024-02-29T23:59:59+01:00')), 2022);
+  assert.equal(letzterAbgeschlossenerWinter(new Date('2024-03-01T00:00:00+01:00')), 2023);
+});
 
 test('Klima: berechnet Kennzahlen mit den vereinbarten Temperaturgrenzen', () => {
   const tage = tageswerte();

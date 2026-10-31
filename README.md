@@ -32,7 +32,7 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 |---|---|---|
 | [Hydris Salzburg](https://www.salzburg.gv.at/wasser/hydro/) | Wassertemperatur der Salzburger Seen | `/api/hydris-salzburg`, Adapter, Laden über `useSeeMessungen`, Anzeige in der Seenliste |
 | [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | `/api/hydro-ooe`, Adapter, Laden über `useSeeMessungen`, Anzeige in der Seenliste |
-| [Open-Meteo Historical Weather](https://open-meteo.com/en/docs/historical-weather-api) | ERA5-Tageswerte der Lufttemperatur seit 1940 → Frost-, Eis- und Hitzetage | direkt über `src/datenquellen/openMeteo.ts`, React-Anbindung geplant |
+| [Open-Meteo Historical Weather](https://open-meteo.com/en/docs/historical-weather-api) | ERA5-Tageswerte der Lufttemperatur seit 1940 → Frost-, Eis- und Hitzetage | direkt über `src/datenquellen/openMeteo.ts`, letzter abgeschlossener Winter in der Seenliste über `useKlimaAlle`, Detailseite geplant |
 | Open-Meteo Forecast | Lufttemperatur-Prognose für 7 Tage | direkt – geplant |
 | LLM-API (Google Gemini) | Einschätzung und Empfehlung, gestreamt | nur serverseitig über `/api/ki` (Streaming), im Browser über `useAI` |
 | Deutschsprachige Wikipedia | Fläche, Tiefe, Seehöhe (Stammdaten aus ESA 1) | statisch |
@@ -95,7 +95,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 
 **Bereits erledigt (Person A):** Projekt-Setup mit Vite, React, TypeScript und ESLint (Commit `7492370`) · Übernahme von Stammdaten, Datenmodell und Filterlogik aus ESA 1 (Commit `80e5646`) · CI mit GitHub Actions · Typen nach Planung Abschnitt 5, Stammdaten mit Stationen und Koordinaten · React Router mit Layout, Navigation und 404-Seite · `fetchJSON` und `useFetch` mit Tests · Salzburg-Proxy `api/hydris-salzburg.ts` und Tests · Dev-Server-Plugin, damit `npm run dev` die `/api`-Funktionen ausführt · Filterlogik nach gemeinsamem Vertrag (alle Messstellen, Eissport-Filter, Kälteserie) mit Tests · Salzburg-Adapter `datenquellen/hydrisSalzburg.ts` mit Tests · `useSeeMessungen` lädt beide Quellen unabhängig voneinander · `SeeDatenContext` stellt die Messwerte allen Seiten bereit · Seenliste mit kontrolliertem Filter, Umschalter Baden/Eissport, Seekarten, Kennzahlen sowie Lade- und Fehleranzeige · KI-Technik: `api/ki.ts` streamt Gemini-Antworten als Text, `utils/aiStream.ts` und `useAI` mit Abbrechen und verständlichen Fehlermeldungen, `.env.example`, alles mit Tests.
 
-**Implementiert (Person B):** OÖ-Proxy `api/hydro-ooe.ts`, Adapter `src/datenquellen/hydroOoe.ts`, Klimaberechnung `src/utils/klima.ts` und historische Open-Meteo-Anbindung `src/datenquellen/openMeteo.ts` mit Tests. Die übrigen B-Aufgaben bleiben geplant.
+**Implementiert (Person B):** OÖ-Proxy `api/hydro-ooe.ts`, Adapter `src/datenquellen/hydroOoe.ts`, Klimaberechnung `src/utils/klima.ts`, historische Open-Meteo-Anbindung `src/datenquellen/openMeteo.ts` und `useKlimaAlle` für den Eissport-Modus der Seenliste. Die Lade- und Berechnungslogik ist mit Tests abgedeckt. Die übrigen B-Aufgaben bleiben geplant.
 
 ## Einsatz von AI-Tools
 

@@ -9,6 +9,8 @@
 
 import type { See } from '../typen/see.ts';
 import type { KlimaTag } from '../utils/klima.ts';
+import type { Klimakennzahlen } from '../typen/klima.ts';
+import { berechneKlimakennzahlen } from '../utils/klima.ts';
 import { fetchJSON } from '../utils/fetchJSON.ts';
 
 const ARCHIV_URL = 'https://archive-api.open-meteo.com/v1/archive';
@@ -68,4 +70,34 @@ export async function ladeKlimatage(see: See, von: string, bis: string, signal?:
   });
   const roh = await fetchJSON<unknown>(`${ARCHIV_URL}?${parameter}`, { signal });
   return zuKlimaTagen(roh);
+}
+
+/** Ein Winter pro See und der Sommer davor. */
+export async function ladeWinterKennzahlen(
+  seen: See[], startjahr: number, signal?: AbortSignal,
+): Promise<{ kennzahlen: Klimakennzahlen[]; fehler: string | null }> {
+  signal?.throwIfAborted();
+  const von = `${startjahr}-06-01`;
+  const bis = new Date(Date.UTC(startjahr + 1, 2, 0)).toISOString().slice(0, 10);
+  const ergebnisse = await Promise.allSettled(seen.map(async (see) => {
+    const tage = await ladeKlimatage(see, von, bis, signal);
+    return berechneKlimakennzahlen(see.id, startjahr, tage);
+  }));
+  signal?.throwIfAborted();
+
+  const kennzahlen: Klimakennzahlen[] = [];
+  const fehlendeSeen: string[] = [];
+  ergebnisse.forEach((ergebnis, index) => {
+    if (ergebnis.status === 'fulfilled' && ergebnis.value !== null) {
+      kennzahlen.push(ergebnis.value);
+    } else {
+      fehlendeSeen.push(seen[index].name);
+    }
+  });
+  return {
+    kennzahlen,
+    fehler: fehlendeSeen.length > 0
+      ? `Für folgende Seen sind die Klimadaten nicht vollständig verfügbar: ${fehlendeSeen.join(', ')}.`
+      : null,
+  };
 }

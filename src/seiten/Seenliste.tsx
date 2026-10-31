@@ -17,10 +17,12 @@ import SeenFilter from '../komponenten/SeenFilter';
 import { useSeenAuswahl } from '../hooks/useSeenAuswahl';
 import type { Filter } from '../typen/ansicht';
 import { STANDARD_FILTER } from '../utils/filter';
+import { letzterAbgeschlossenerWinter } from '../utils/klima';
 
 export default function Seenliste(): React.JSX.Element {
   const [filter, setFilter] = useState<Filter>(STANDARD_FILTER);
   const { auswahl, isLaden, fehler, neuLaden } = useSeenAuswahl(filter);
+  const winterStartjahr = letzterAbgeschlossenerWinter();
 
   return (
     <>
@@ -32,6 +34,10 @@ export default function Seenliste(): React.JSX.Element {
 
       <SeenFilter filter={filter} onAendern={setFilter} />
 
+      {filter.aktivitaet === 'eissport' && (
+        <p>Die Kälteserie bezieht sich auf den abgeschlossenen Winter {winterStartjahr}/{String(winterStartjahr + 1).slice(-2)}.</p>
+      )}
+
       {fehler.salzburg && (
         <FehlerMeldung meldung="Die Messwerte aus Salzburg sind gerade nicht erreichbar." onErneutVersuchen={neuLaden} />
       )}
@@ -42,7 +48,7 @@ export default function Seenliste(): React.JSX.Element {
         />
       )}
       {filter.aktivitaet === 'eissport' && fehler.klima && (
-        <FehlerMeldung meldung="Die Klimadaten sind gerade nicht erreichbar." onErneutVersuchen={neuLaden} />
+        <FehlerMeldung meldung={fehler.klima} onErneutVersuchen={neuLaden} />
       )}
 
       {isLaden ? (

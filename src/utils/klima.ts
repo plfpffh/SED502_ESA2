@@ -18,6 +18,16 @@ export interface KlimaTag {
   mittel: number | null;
 }
 
+/** Startjahr vom letzten abgeschlossenen Winter, Zeitzone: Europe/Vienna. */
+export function letzterAbgeschlossenerWinter(heute = new Date()): number {
+  const teile = new Intl.DateTimeFormat('de-AT', {
+    timeZone: 'Europe/Vienna', year: 'numeric', month: 'numeric',
+  }).formatToParts(heute);
+  const jahr = Number(teile.find((teil) => teil.type === 'year')?.value);
+  const monat = Number(teile.find((teil) => teil.type === 'month')?.value);
+  return monat >= 3 ? jahr - 1 : jahr - 2;
+}
+
 /** Sammelt die Tage chronologisch. Das Ende des Zeitraums ist nicht enthalten. */
 function tageImZeitraum(tage: Map<string, KlimaTag>, von: string, bis: string): KlimaTag[] | null {
   const ergebnis: KlimaTag[] = [];

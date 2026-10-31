@@ -38,7 +38,7 @@ export function useSeenAuswahl(filter: Filter): SeenAuswahl {
 
   return {
     auswahl,
-    isLaden: daten.isLaden || klima.isLaden,
+    isLaden: daten.isLaden || (filter.aktivitaet === 'eissport' && klima.isLaden),
     fehler: { ...daten.fehler, klima: klima.fehler },
     neuLaden,
   };
