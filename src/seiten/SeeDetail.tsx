@@ -31,7 +31,11 @@ export default function SeeDetail(): React.JSX.Element {
   return <SeeDetailInhalt key={see.id} see={see} />;
 }
 
-function SeeDetailInhalt({ see }: { see: See }): React.JSX.Element {
+interface SeeDetailInhaltProps {
+  see: See;
+}
+
+function SeeDetailInhalt({ see }: SeeDetailInhaltProps): React.JSX.Element {
   const detail = useSeeDetail(see);
   const { kennzahlen, isLaden, fehler, neuLaden } = useKlimatrend(see);
   const ki = useAI({ systemPrompt: KI_REGELN, maxNachrichten: 1 });
