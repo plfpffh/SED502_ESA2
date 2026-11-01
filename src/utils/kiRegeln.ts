@@ -1,8 +1,8 @@
 /**
  * kiRegeln.ts – gemeinsame Regeln für den System-Prompt der KI (PLANUNG.md, Abschnitt 8)
  *
- * ENTWURF, gemeinsam mit Christoph Hauser (Person B) abzustimmen. SeeDetail und KiBerater hängen ihre
- * eigene Aufgabe und die Seedaten an diese Regeln an, z.B. useAI({ systemPrompt: `${KI_REGELN}\n\n${aufgabe}` }).
+ * SeeDetail und KiBerater verwenden diese Regeln als Systemprompt.
+ * Die jeweilige Aufgabe und die Seedaten werden als Prompt übermittelt.
  * Die Zahlen berechnet immer der Code, die KI erklärt sie nur.
  *
  * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel

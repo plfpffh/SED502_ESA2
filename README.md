@@ -4,11 +4,11 @@
 
 Gruppenprojekt für die Einsendeaufgabe 2 im Modul **SED502 Front-End Development** (Ferdinand Porsche FernFH, WS 2026/27).
 
-> **Status:** in Entwicklung. Punkte, die noch nicht umgesetzt sind, sind als *geplant* gekennzeichnet. Die verbindliche, ausführliche Planung steht in [`docs/PLANUNG.md`](docs/PLANUNG.md).
+> **Status:** Die ESA-2-Funktionen sind implementiert. Die verbindliche, ausführliche Planung steht in [`docs/PLANUNG.md`](docs/PLANUNG.md).
 
 ## Projektbeschreibung
 
-Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **aktuelle Wassertemperatur live** und ordnet sie mit **Klimadaten seit 1940** ein: Wie warm ist der See heute zum Baden? Wie viele Frost- und Hitzetage gab es im letzten Winter bzw. Sommer, und wie haben sie sich über die Jahrzehnte verändert? Eine **KI** erklärt die Zahlen verständlich und gibt eine Empfehlung für das Wochenende.
+Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **aktuelle Wassertemperatur live** und ergänzt sie durch **Klimadaten ab Winter 1950/51**. Die Detailseiten zeigen den Verlauf der Frosttage. Für den letzten abgeschlossenen Winter und den Sommer davor werden weitere Klimakennzahlen berechnet. Eine **KI** erklärt die Zahlen verständlich und gibt eine Empfehlung für einen Ausflug innerhalb der nächsten sieben Tage.
 
 **Zielgruppe:** Badegäste und Eissport-Interessierte in Salzburg und Oberösterreich sowie alle, die sehen wollen, wie sich der Klimawandel an den Seen der Region zeigt.
 
@@ -32,7 +32,7 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 |---|---|---|
 | [Hydris Salzburg](https://www.salzburg.gv.at/wasser/hydro/) | Wassertemperatur der Salzburger Seen | `/api/hydris-salzburg`, Adapter, Laden über `useSeeMessungen`, Anzeige in der Seenliste |
 | [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | `/api/hydro-ooe`, Adapter, Laden über `useSeeMessungen`, Anzeige in der Seenliste |
-| [Open-Meteo Historical Weather](https://open-meteo.com/en/docs/historical-weather-api) | ERA5-Tageswerte der Lufttemperatur seit 1940 → Frost-, Eis- und Hitzetage | direkt über `src/datenquellen/openMeteo.ts`, letzter abgeschlossener Winter über `useKlimaAlle`, Historie ab Winter 1950/51 über `useKlimatrend` auf der Detailseite |
+| [Open-Meteo Historical Weather](https://open-meteo.com/en/docs/historical-weather-api) | ERA5-Tageswerte der Lufttemperatur → Frost-, Eis- und Hitzetage, in der App ab Winter 1950/51 ausgewertet | direkt über `src/datenquellen/openMeteo.ts`, letzter abgeschlossener Winter über `useKlimaAlle`, Historie über `useKlimatrend` auf der Detailseite |
 | [Open-Meteo Forecast](https://open-meteo.com/en/docs) | Tagesminimum und Tagesmaximum der Lufttemperatur für 7 Tage ab heute | über `usePrognose` im KI-Berater eingebunden |
 | LLM-API (Google Gemini) | Einschätzung und Empfehlung, gestreamt | nur serverseitig über `/api/ki` (Streaming), im Browser über `useAI` |
 | Deutschsprachige Wikipedia | Fläche, Tiefe, Seehöhe (Stammdaten aus ESA 1) | statisch |
@@ -83,12 +83,12 @@ Benötigt wird **Node.js ab 22.18** (in der CI: Node 24), weil die Tests TypeScr
 
 Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur Seite. So hat jede Person Commits in `api/`, `datenquellen/`, `hooks/`, `komponenten/` und `seiten/`, und die Beiträge sind gleichwertig. Details, Schnittstellen und Zeitplan: [`docs/PLANUNG.md`, Abschnitt 6](docs/PLANUNG.md#6-aufgabenverteilung).
 
-> **Stand: Planung.** Die Tabelle zeigt die vereinbarte Verteilung. Vor der Abgabe wird sie auf den tatsächlich umgesetzten Stand umgestellt: wer hat was gemacht, mit den wichtigsten Dateien je Person.
+Die Tabelle zeigt die umgesetzte Aufgabenverteilung mit den wichtigsten Dateien je Person.
 
 | | Person A – plfpffh | Person B – cchhrriiss |
 |---|---|---|
 | **Datenquelle** | Hydris Salzburg: Proxy `api/hydris-salzburg.ts`, Adapter `datenquellen/hydrisSalzburg.ts` | Hydro OÖ: Proxy `api/hydro-ooe.ts`, Adapter `datenquellen/hydroOoe.ts` |
-| **Hooks** | `fetchJSON` (generischer Wrapper), `useFetch`, `useSeeMessungen` (führt beide Landesquellen zusammen), `useSeenAuswahl` | `useKlimatrend`, `useKlimaAlle` (Open-Meteo) |
+| **Hooks** | `fetchJSON` (generischer Wrapper), `useFetch`, `useSeeMessungen` (führt beide Landesquellen zusammen), `useSeenAuswahl` | `useKlimatrend`, `useKlimaAlle`, `usePrognose` (Open-Meteo), `useSeeDetail`, `useBeraterDaten` |
 | **Logik** | `utils/seen.ts` (aus ESA 1), Eissport-Filter | `utils/klima.ts` (Frost-, Eis-, Hitzetage, Kälteserie) |
 | **Seiten** | `Seenliste` (`/seen`) mit Filter und Umschalter Baden/Eissport | `SeeDetail` (`/seen/:id`), `KiBerater` (`/berater`), `Startseite` (`/`) |
 | **Komponenten** | `SeeKarte`, `SeenFilter`, `MindestwertFilter`, `Kennzahlen`, `Ladeanimation`, `FehlerMeldung`, `Navigation` | `KlimaDiagramm`, `KiAntwort` |
