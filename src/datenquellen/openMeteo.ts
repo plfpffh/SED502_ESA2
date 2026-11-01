@@ -1,7 +1,9 @@
 /**
- * openMeteo.ts – Historische Lufttemperaturen am Standort eines Sees
+ * openMeteo.ts – Historische Lufttemperaturen und 7-Tage-Vorhersage am Standort eines Sees
  *
- * Dokumentation: https://open-meteo.com/en/docs/historical-weather-api
+ * Dokumentationen:
+ * Historische Daten: https://open-meteo.com/en/docs/historical-weather-api
+ * Vorhersagedaten: https://open-meteo.com/en/docs
  *
  * @project FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
  * @author Christoph Hauser
@@ -10,11 +12,15 @@
 import type { See } from '../typen/see.ts';
 import type { KlimaTag } from '../utils/klima.ts';
 import type { Klimakennzahlen } from '../typen/klima.ts';
+import type { Prognosetag, SeePrognose } from '../typen/prognose.ts';
 import { berechneKlimakennzahlen, berechneKlimatrend, letzterAbgeschlossenerWinter } from '../utils/klima.ts';
 import { fetchJSON, HttpFehler } from '../utils/fetchJSON.ts';
 import { klimaCacheSchluessel, liesKlimaCache, speichereKlimaCache } from '../utils/klimaCache.ts';
 
 const ARCHIV_URL = 'https://archive-api.open-meteo.com/v1/archive';
+const PROGNOSE_URL = 'https://api.open-meteo.com/v1/forecast';
+const PROGNOSE_DAUER = 30 * 60 * 1000;
+const prognoseCache = new Map<string, { zeitpunkt: number; prognose: SeePrognose }>();
 const FORMATFEHLER = 'Die Klimadaten von Open-Meteo haben ein unerwartetes Format.';
 const LIMITMELDUNG = 'Open-Meteo Anfragelimit erreicht, bitte warten und später erneut versuchen.';
 
@@ -145,6 +151,92 @@ export async function ladeKlimatrend(
     kennzahlen,
     fehler: fehlendeWinter > 0
       ? `Für ${fehlendeWinter} Winter sind die Klimadaten nicht vollständig verfügbar. Diese Zeiträume wurden nicht ausgewertet.`
+      : null,
+  };
+}
+
+export function zuPrognosetagen(roh: unknown): Prognosetag[] {
+  const fehler = 'Die Wetterprognose von Open-Meteo hat ein unerwartetes Format.';
+  if (!istObjekt(roh) || !istObjekt(roh.daily)) throw new Error(fehler);
+  const { time, temperature_2m_min: minimum, temperature_2m_max: maximum } = roh.daily;
+  if (!Array.isArray(time) || !Array.isArray(minimum) || !Array.isArray(maximum)
+    || minimum.length !== time.length || maximum.length !== time.length) throw new Error(fehler);
+
+  const bekannteTage = new Set<string>();
+  return time.map((datum: unknown, index) => {
+    if (!istDatum(datum) || bekannteTage.has(datum)) throw new Error(fehler);
+    bekannteTage.add(datum);
+    return { datum, temperaturMin: zuTemperatur(minimum[index]), temperaturMax: zuTemperatur(maximum[index]) };
+  });
+}
+
+function prognoseTage(heute: Date): string[] {
+  const teile = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Vienna', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(heute);
+  const wert = (typ: string): string => teile.find((teil) => teil.type === typ)?.value ?? '';
+  const datum = new Date(`${wert('year')}-${wert('month')}-${wert('day')}T00:00:00Z`);
+  return Array.from({ length: 7 }, () => {
+    const tag = datum.toISOString().slice(0, 10);
+    datum.setUTCDate(datum.getUTCDate() + 1);
+    return tag;
+  });
+}
+
+export async function ladePrognosen(
+  seen: See[], signal?: AbortSignal, neuLaden = false, heute = new Date(),
+): Promise<{ prognosen: SeePrognose[]; fehler: string | null }> {
+  signal?.throwIfAborted();
+  const tage = prognoseTage(heute);
+  const ergebnisse = await Promise.allSettled(seen.map(async (see) => {
+    const schluessel = [see.id, see.lat, see.lng, see.seehoeheM].join(':');
+    const gespeichert = prognoseCache.get(schluessel);
+    const alter = gespeichert ? Date.now() - gespeichert.zeitpunkt : Infinity;
+    if (!neuLaden && gespeichert && alter >= 0 && alter < PROGNOSE_DAUER
+      && gespeichert.prognose.tage[0]?.datum === tage[0]) return gespeichert.prognose;
+
+    const parameter = new URLSearchParams({
+      latitude: String(see.lat), longitude: String(see.lng), elevation: String(see.seehoeheM),
+      daily: 'temperature_2m_min,temperature_2m_max', forecast_days: '7',
+      timezone: 'Europe/Vienna', temperature_unit: 'celsius',
+    });
+    let roh: unknown;
+    try {
+      roh = await fetchJSON<unknown>(`${PROGNOSE_URL}?${parameter}`, { signal });
+    } catch (fehler) {
+      if (fehler instanceof HttpFehler && fehler.status === 429) throw new HttpFehler(429, LIMITMELDUNG);
+      throw fehler;
+    }
+    signal?.throwIfAborted();
+    const nachDatum = new Map(zuPrognosetagen(roh).map((tag) => [tag.datum, tag]));
+    const prognose: SeePrognose = {
+      seeId: see.id,
+      tage: tage.map((datum) => nachDatum.get(datum) ?? { datum, temperaturMin: null, temperaturMax: null }),
+    };
+    if (!prognose.tage.some((tag) => tag.temperaturMin !== null || tag.temperaturMax !== null)) return null;
+    if (prognose.tage.every((tag) => tag.temperaturMin !== null && tag.temperaturMax !== null)) {
+      prognoseCache.set(schluessel, { zeitpunkt: Date.now(), prognose });
+    }
+    return prognose;
+  }));
+  signal?.throwIfAborted();
+
+  const prognosen: SeePrognose[] = [];
+  const fehlendeSeen: string[] = [];
+  const limitErreicht = ergebnisse.some((ergebnis) =>
+    ergebnis.status === 'rejected' && ergebnis.reason instanceof HttpFehler && ergebnis.reason.status === 429,
+  );
+  ergebnisse.forEach((ergebnis, index) => {
+    if (ergebnis.status === 'fulfilled' && ergebnis.value !== null) {
+      prognosen.push(ergebnis.value);
+      if (ergebnis.value.tage.every((tag) => tag.temperaturMin !== null && tag.temperaturMax !== null)) return;
+    }
+    fehlendeSeen.push(seen[index].name);
+  });
+  return {
+    prognosen,
+    fehler: fehlendeSeen.length > 0
+      ? `${limitErreicht ? `${LIMITMELDUNG} ` : ''}Für folgende Seen ist die Wetterprognose nicht vollständig verfügbar: ${fehlendeSeen.join(', ')}.`
       : null,
   };
 }

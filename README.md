@@ -33,13 +33,15 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 | [Hydris Salzburg](https://www.salzburg.gv.at/wasser/hydro/) | Wassertemperatur der Salzburger Seen | `/api/hydris-salzburg`, Adapter, Laden über `useSeeMessungen`, Anzeige in der Seenliste |
 | [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | `/api/hydro-ooe`, Adapter, Laden über `useSeeMessungen`, Anzeige in der Seenliste |
 | [Open-Meteo Historical Weather](https://open-meteo.com/en/docs/historical-weather-api) | ERA5-Tageswerte der Lufttemperatur seit 1940 → Frost-, Eis- und Hitzetage | direkt über `src/datenquellen/openMeteo.ts`, letzter abgeschlossener Winter über `useKlimaAlle`, Historie ab Winter 1950/51 über `useKlimatrend` auf der Detailseite |
-| Open-Meteo Forecast | Lufttemperatur-Prognose für 7 Tage | direkt – geplant |
+| [Open-Meteo Forecast](https://open-meteo.com/en/docs) | Tagesminimum und Tagesmaximum der Lufttemperatur für 7 Tage ab heute | Datenquelle und `usePrognose` implementiert, Anzeige im KI-Berater folgt |
 | LLM-API (Google Gemini) | Einschätzung und Empfehlung, gestreamt | nur serverseitig über `/api/ki` (Streaming), im Browser über `useAI` |
 | Deutschsprachige Wikipedia | Fläche, Tiefe, Seehöhe (Stammdaten aus ESA 1) | statisch |
 
 Hydris und der Hydrographische Dienst OÖ sind **keine offiziell dokumentierten APIs**. Das Format kann sich jederzeit ändern. Die App fängt Fehler dieser Quellen ab. Fällt eine Quelle aus, zeigt die andere weiterhin Werte, und betroffene Seen erscheinen mit „Wert aktuell nicht vorhanden“ am Ende der Liste, statt ausgeblendet zu werden.
 
 Erfolgreich abgerufene historische Klimakennzahlen bleiben für 24 Stunden im Browser zwischengespeichert. Dadurch sind beim Seitenwechsel und Neuladen weniger erneute Open-Meteo-Abrufe nötig. Lange Zeiträume werden im Open-Meteo-Kontingent als mehrere API-Aufrufe angerechnet. Bei HTTP 429 weist die App auf das Anfragelimit hin.
+
+Vollständige Wetterprognosen können bei weiteren Abrufen im laufenden Tab aus dem Cache kommen. Dieser gilt höchstens 30 Minuten und nur für denselben Kalendertag in Österreich. `neuLaden()` umgeht den Cache. Fehlende Prognosewerte bleiben `null`, erfolgreiche Seen bleiben bei Teilausfällen verfügbar.
 
 OÖ-Quelle: <https://hydro.ooe.gv.at/daten/internet/layers/5/index.json>, geprüft am **29.10.2026**. Der Proxy benötigt keinen API-Schlüssel.
 
@@ -97,7 +99,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 
 **Bereits erledigt (Person A):** Projekt-Setup mit Vite, React, TypeScript und ESLint (Commit `7492370`) · Übernahme von Stammdaten, Datenmodell und Filterlogik aus ESA 1 (Commit `80e5646`) · CI mit GitHub Actions · Typen nach Planung Abschnitt 5, Stammdaten mit Stationen und Koordinaten · React Router mit Layout, Navigation und 404-Seite · `fetchJSON` und `useFetch` mit Tests · Salzburg-Proxy `api/hydris-salzburg.ts` und Tests · Dev-Server-Plugin, damit `npm run dev` die `/api`-Funktionen ausführt · Filterlogik nach gemeinsamem Vertrag (alle Messstellen, Eissport-Filter, Kälteserie) mit Tests · Salzburg-Adapter `datenquellen/hydrisSalzburg.ts` mit Tests · `useSeeMessungen` lädt beide Quellen unabhängig voneinander · `SeeDatenContext` stellt die Messwerte allen Seiten bereit · Seenliste mit kontrolliertem Filter, Umschalter Baden/Eissport, Seekarten, Kennzahlen sowie Lade- und Fehleranzeige · KI-Technik: `api/ki.ts` streamt Gemini-Antworten als Text, `utils/aiStream.ts` und `useAI` mit Abbrechen und verständlichen Fehlermeldungen, `.env.example`, alles mit Tests.
 
-**Implementiert (Person B):** OÖ-Proxy `api/hydro-ooe.ts`, Adapter `src/datenquellen/hydroOoe.ts`, Klimaberechnung `src/utils/klima.ts`, historische Open-Meteo-Anbindung `src/datenquellen/openMeteo.ts`, `useKlimaAlle` für den Eissport-Modus der Seenliste und `useKlimatrend` für die Historie eines Sees. Die Detailseite zeigt Stammdaten, Temperaturen aller Messstellen mit Quelle und Messzeitpunkt sowie die Frosttage als Diagramm und Tabelle. Eine KI-Einschätzung kann per Knopfdruck angefordert werden. `KiAntwort` zeigt den Stream mit Abbrechen, Kopieren und Fehleranzeige. Die Lade-, Berechnungs- und Promptlogik ist mit Tests abgedeckt. Die übrigen B-Aufgaben bleiben geplant.
+**Implementiert (Person B):** OÖ-Proxy `api/hydro-ooe.ts`, Adapter `src/datenquellen/hydroOoe.ts`, Klimaberechnung `src/utils/klima.ts`, Open-Meteo-Anbindung `src/datenquellen/openMeteo.ts`, `useKlimaAlle` für den Eissport-Modus der Seenliste, `useKlimatrend` für die Historie eines Sees und `usePrognose` für die 7-Tage-Wetterprognose. Die Detailseite zeigt Stammdaten, Temperaturen aller Messstellen mit Quelle und Messzeitpunkt sowie die Frosttage als Diagramm und Tabelle. Eine KI-Einschätzung kann per Knopfdruck angefordert werden. `KiAntwort` zeigt den Stream mit Abbrechen, Kopieren und Fehleranzeige. Die Lade-, Berechnungs- und Promptlogik ist mit Tests abgedeckt. Die übrigen B-Aufgaben bleiben geplant.
 
 ## Einsatz von AI-Tools
 
