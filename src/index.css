@@ -433,3 +433,39 @@ select:disabled {
   font-size: 1.25rem;
   font-weight: 600;
 }
+
+/* KI-Einschätzung und Antwortanzeige */
+.kieinschaetzung {
+  margin-block: 32px;
+}
+
+.kiantwort {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--rand);
+  border-radius: 8px;
+  background: var(--flaeche);
+}
+
+.kiantwort__kennzeichnung {
+  margin-top: 0;
+  color: var(--akzent);
+  font-weight: 700;
+}
+
+.kiantwort__text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.kiantwort__aktionen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.kiantwort__kopierstatus {
+  margin-bottom: 0;
+  color: var(--text-leise);
+}
