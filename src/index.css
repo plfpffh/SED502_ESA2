@@ -470,6 +470,32 @@ select:disabled {
   color: var(--text-leise);
 }
 
+/* Startseite */
+.start-angebote {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 16px;
+  margin-block: 24px;
+}
+
+.start-angebote section {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border: 1px solid var(--rand);
+  border-radius: 8px;
+  background: var(--flaeche);
+}
+
+.start-angebote h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.start-angebote a {
+  margin-top: auto;
+}
+
 /* KI-Berater CSS */
 .berater {
   min-width: 0;
