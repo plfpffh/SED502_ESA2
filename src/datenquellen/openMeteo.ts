@@ -16,6 +16,7 @@ import type { Prognosetag, SeePrognose } from '../typen/prognose.ts';
 import { berechneKlimakennzahlen, berechneKlimatrend, letzterAbgeschlossenerWinter } from '../utils/klima.ts';
 import { fetchJSON, HttpFehler } from '../utils/fetchJSON.ts';
 import { klimaCacheSchluessel, liesKlimaCache, speichereKlimaCache } from '../utils/klimaCache.ts';
+import { prognoseTage } from '../utils/prognose.ts';
 
 const ARCHIV_URL = 'https://archive-api.open-meteo.com/v1/archive';
 const PROGNOSE_URL = 'https://api.open-meteo.com/v1/forecast';
@@ -167,19 +168,6 @@ export function zuPrognosetagen(roh: unknown): Prognosetag[] {
     if (!istDatum(datum) || bekannteTage.has(datum)) throw new Error(fehler);
     bekannteTage.add(datum);
     return { datum, temperaturMin: zuTemperatur(minimum[index]), temperaturMax: zuTemperatur(maximum[index]) };
-  });
-}
-
-function prognoseTage(heute: Date): string[] {
-  const teile = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/Vienna', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(heute);
-  const wert = (typ: string): string => teile.find((teil) => teil.type === typ)?.value ?? '';
-  const datum = new Date(`${wert('year')}-${wert('month')}-${wert('day')}T00:00:00Z`);
-  return Array.from({ length: 7 }, () => {
-    const tag = datum.toISOString().slice(0, 10);
-    datum.setUTCDate(datum.getUTCDate() + 1);
-    return tag;
   });
 }
 

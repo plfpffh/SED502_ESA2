@@ -469,3 +469,74 @@ select:disabled {
   margin-bottom: 0;
   color: var(--text-leise);
 }
+
+/* KI-Berater CSS */
+.berater {
+  min-width: 0;
+}
+
+.berater-form {
+  max-width: 48rem;
+  margin-block: 24px;
+}
+
+.berater-form fieldset {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--rand);
+  border-radius: 8px;
+  background: var(--flaeche);
+}
+
+.berater-form legend {
+  font-weight: 600;
+}
+
+.berater-form .berater__aktivitaet {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0;
+  border: 0;
+}
+
+.berater-form__raster {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 16px;
+}
+
+.berater-form label {
+  display: grid;
+  gap: 4px;
+}
+
+.berater__aktivitaet label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.berater-form input[type='text'],
+.berater-form textarea,
+.berater-form select {
+  min-width: 0;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--rand);
+  border-radius: 4px;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+}
+
+.berater-form textarea {
+  resize: vertical;
+}
+
+.berater__hinweis {
+  margin: 0;
+  color: var(--text-leise);
+  font-size: 0.875rem;
+}
