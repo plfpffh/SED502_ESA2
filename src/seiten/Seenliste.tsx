@@ -35,7 +35,11 @@ export default function Seenliste(): React.JSX.Element {
       <SeenFilter filter={filter} onAendern={setFilter} />
 
       {filter.aktivitaet === 'eissport' && (
-        <p>Die Kälteserie bezieht sich auf den abgeschlossenen Winter {winterStartjahr}/{String(winterStartjahr + 1).slice(-2)}.</p>
+        <p>
+          
+          Angezeigt wird die längste zusammenhängende Serie von Tagen, an denen die Lufttemperatur im Tagesdurchschnitt
+          unter 0 °C gewesen ist. Die Kälteserie bezieht sich auf die längste Serie im letzten abgeschlossenen Winter. Konkret wird der Zeitraum von Dezember {winterStartjahr} bis Februar {winterStartjahr + 1} herangezogen.
+        </p>
       )}
 
       {fehler.salzburg && (
