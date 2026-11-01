@@ -380,3 +380,56 @@ select:disabled {
 .klimadiagramm td {
   text-align: right;
 }
+
+/* Stammdaten und Messstellen auf der Detailseite */
+.seeinformationen {
+  margin-bottom: 32px;
+}
+
+.messwerte__kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.messwerte__mittelwert strong {
+  color: var(--akzent);
+}
+
+.messstellen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.messstellen li {
+  padding: 16px;
+  border: 1px solid var(--rand);
+  border-radius: 8px;
+  background: var(--flaeche);
+}
+
+.messstellen h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.messstellen p {
+  margin: 8px 0 0;
+}
+
+.messstellen__quelle {
+  color: var(--text-leise);
+  font-size: 0.875rem;
+}
+
+.messstellen__temperatur {
+  color: var(--akzent);
+  font-size: 1.25rem;
+  font-weight: 600;
+}

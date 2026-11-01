@@ -1,7 +1,7 @@
 /**
  * SeeDetail.tsx – Detailseite eines Sees (/seen/:id)
  *
- * Klimatrend mit Diagramm und Tabelle.
+ * Stammdaten, aktuelle Temperaturen und Klimatrend mit Diagramm und Tabelle.
  *
  * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
  * @author   Christoph Hauser
@@ -11,8 +11,10 @@ import { lazy, Suspense } from 'react';
 import { Link, useParams } from 'react-router';
 import { seen } from '../daten/seen';
 import { useKlimatrend } from '../hooks/useKlimatrend';
+import { useSeeDetail } from '../hooks/useSeeDetail';
 import FehlerMeldung from '../komponenten/FehlerMeldung';
 import Ladeanimation from '../komponenten/Ladeanimation';
+import SeeInformationen from '../komponenten/SeeInformationen';
 import type { See } from '../typen/see';
 import NichtGefunden from './NichtGefunden';
 
@@ -26,11 +28,13 @@ export default function SeeDetail(): React.JSX.Element {
 }
 
 function SeeDetailInhalt({ see }: { see: See }): React.JSX.Element {
+  const detail = useSeeDetail(see);
   const { kennzahlen, isLaden, fehler, neuLaden } = useKlimatrend(see);
   return (
     <>
       <p><Link to="/seen">Zur Seenübersicht</Link></p>
       <h1>{see.name}</h1>
+      <SeeInformationen {...detail} />
       <section aria-labelledby="klimatrend-titel">
         <h2 id="klimatrend-titel">Klimatrend</h2>
         {isLaden ? <Ladeanimation text="Klimatrend wird geladen …" /> : (
