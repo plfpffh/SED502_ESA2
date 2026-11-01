@@ -33,3 +33,9 @@ export function formatiereKaelteserie(tage: number | null): string {
 export function formatiereZeitpunkt(iso: string): string {
   return datumZeit.format(new Date(iso));
 }
+
+export function formatierePrognosetag(iso: string): string {
+  return new Intl.DateTimeFormat('de-AT', {
+    weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC',
+  }).format(new Date(`${iso}T00:00:00Z`));
+}

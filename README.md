@@ -4,11 +4,11 @@
 
 Gruppenprojekt für die Einsendeaufgabe 2 im Modul **SED502 Front-End Development** (Ferdinand Porsche FernFH, WS 2026/27).
 
-> **Status:** in Entwicklung. Punkte, die noch nicht umgesetzt sind, sind als *geplant* gekennzeichnet. Die verbindliche, ausführliche Planung steht in [`docs/PLANUNG.md`](docs/PLANUNG.md).
+> **Status:** Die ESA-2-Funktionen sind implementiert. Die verbindliche, ausführliche Planung steht in [`docs/PLANUNG.md`](docs/PLANUNG.md).
 
 ## Projektbeschreibung
 
-Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **aktuelle Wassertemperatur live** und ordnet sie mit **Klimadaten seit 1940** ein: Wie warm ist der See heute zum Baden? Wie viele Frost- und Hitzetage gab es im letzten Winter bzw. Sommer, und wie haben sie sich über die Jahrzehnte verändert? Eine **KI** erklärt die Zahlen verständlich und gibt eine Empfehlung für das Wochenende.
+Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **aktuelle Wassertemperatur live** und ergänzt sie durch **Klimadaten ab Winter 1950/51**. Die Detailseiten zeigen den Verlauf der Frosttage. Für den letzten abgeschlossenen Winter und den Sommer davor werden weitere Klimakennzahlen berechnet. Eine **KI** erklärt die Zahlen verständlich und gibt eine Empfehlung für einen Ausflug innerhalb der nächsten sieben Tage.
 
 **Zielgruppe:** Badegäste und Eissport-Interessierte in Salzburg und Oberösterreich sowie alle, die sehen wollen, wie sich der Klimawandel an den Seen der Region zeigt.
 
@@ -24,22 +24,26 @@ Die App zeigt für 14 Seen im Salzburger Seenland und im Salzkammergut die **akt
 | ESLint mit `react-hooks` | prüft u. a. vollständige Abhängigkeits-Arrays von `useEffect` | ✅ |
 | React Router 8 (Paket `react-router`, seit Version 7 ohne `-dom`) | Navigation zwischen den Seiten | ✅ |
 | Serverless Functions im Format von Vercel (`api/`) | Proxy für die Landesdaten, geschützter LLM-Aufruf | OÖ-, Salzburg- und KI-Proxy implementiert, lokal über `npm run dev`. Das Deployment auf Vercel ist Teil von ESA 3 |
-| Recharts | Diagramm der Frosttage pro Winter | geplant |
+| Recharts | Diagramm der Frosttage pro Winter mit ergänzender Tabelle | auf der Detailseite implementiert |
 
 ## APIs und Datenquellen
 
 | Quelle | Inhalt | Zugriff |
 |---|---|---|
 | [Hydris Salzburg](https://www.salzburg.gv.at/wasser/hydro/) | Wassertemperatur der Salzburger Seen | `/api/hydris-salzburg`, Adapter, Laden über `useSeeMessungen`, Anzeige in der Seenliste |
-| [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | `/api/hydro-ooe` implementiert, Adapter und React-Anbindung geplant |
-| [Open-Meteo Historical Weather](https://open-meteo.com/) | Tageswerte der Lufttemperatur seit 1940 → Frost-, Eis- und Hitzetage | direkt – geplant |
-| Open-Meteo Forecast | Lufttemperatur-Prognose für 7 Tage | direkt – geplant |
+| [Hydrographischer Dienst Oberösterreich](https://hydro.ooe.gv.at/) | Wassertemperatur der oberösterreichischen Seen | `/api/hydro-ooe`, Adapter, Laden über `useSeeMessungen`, Anzeige in der Seenliste |
+| [Open-Meteo Historical Weather](https://open-meteo.com/en/docs/historical-weather-api) | ERA5-Tageswerte der Lufttemperatur → Frost-, Eis- und Hitzetage, in der App ab Winter 1950/51 ausgewertet | direkt über `src/datenquellen/openMeteo.ts`, letzter abgeschlossener Winter über `useKlimaAlle`, Historie über `useKlimatrend` auf der Detailseite |
+| [Open-Meteo Forecast](https://open-meteo.com/en/docs) | Tagesminimum und Tagesmaximum der Lufttemperatur für 7 Tage ab heute | über `usePrognose` im KI-Berater eingebunden |
 | LLM-API (Google Gemini) | Einschätzung und Empfehlung, gestreamt | nur serverseitig über `/api/ki` (Streaming), im Browser über `useAI` |
 | Deutschsprachige Wikipedia | Fläche, Tiefe, Seehöhe (Stammdaten aus ESA 1) | statisch |
 
 Hydris und der Hydrographische Dienst OÖ sind **keine offiziell dokumentierten APIs**. Das Format kann sich jederzeit ändern. Die App fängt Fehler dieser Quellen ab. Fällt eine Quelle aus, zeigt die andere weiterhin Werte, und betroffene Seen erscheinen mit „Wert aktuell nicht vorhanden“ am Ende der Liste, statt ausgeblendet zu werden.
 
-OÖ-Quelle: <https://hydro.ooe.gv.at/daten/internet/layers/5/index.json>, geprüft am **11.10.2026**. Der Proxy benötigt keinen API-Schlüssel.
+Erfolgreich abgerufene historische Klimakennzahlen bleiben für 24 Stunden im Browser zwischengespeichert. Dadurch sind beim Seitenwechsel und Neuladen weniger erneute Open-Meteo-Abrufe nötig. Lange Zeiträume werden im Open-Meteo-Kontingent als mehrere API-Aufrufe angerechnet. Bei HTTP 429 weist die App auf das Anfragelimit hin.
+
+Vollständige Wetterprognosen können bei weiteren Abrufen im laufenden Tab aus dem Cache kommen. Dieser gilt höchstens 30 Minuten und nur für denselben Kalendertag in Österreich. `neuLaden()` umgeht den Cache. Fehlende Prognosewerte bleiben `null`, erfolgreiche Seen bleiben bei Teilausfällen verfügbar.
+
+OÖ-Quelle: <https://hydro.ooe.gv.at/daten/internet/layers/5/index.json>, geprüft am **29.10.2026**. Der Proxy benötigt keinen API-Schlüssel.
 
 Salzburg-Quelle: <https://www.salzburg.gv.at/wasser/hydro/grafiken/data.json>, geprüft am **28.10.2026**. Liefert eine einzelne Station keinen gültigen Wert, wird nur dieser See als „Wert aktuell nicht vorhanden“ angezeigt.
 
@@ -79,12 +83,12 @@ Benötigt wird **Node.js ab 22.18** (in der CI: Node 24), weil die Tests TypeScr
 
 Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur Seite. So hat jede Person Commits in `api/`, `datenquellen/`, `hooks/`, `komponenten/` und `seiten/`, und die Beiträge sind gleichwertig. Details, Schnittstellen und Zeitplan: [`docs/PLANUNG.md`, Abschnitt 6](docs/PLANUNG.md#6-aufgabenverteilung).
 
-> **Stand: Planung.** Die Tabelle zeigt die vereinbarte Verteilung. Vor der Abgabe wird sie auf den tatsächlich umgesetzten Stand umgestellt: wer hat was gemacht, mit den wichtigsten Dateien je Person.
+Die Tabelle zeigt die umgesetzte Aufgabenverteilung mit den wichtigsten Dateien je Person.
 
 | | Person A – plfpffh | Person B – cchhrriiss |
 |---|---|---|
 | **Datenquelle** | Hydris Salzburg: Proxy `api/hydris-salzburg.ts`, Adapter `datenquellen/hydrisSalzburg.ts` | Hydro OÖ: Proxy `api/hydro-ooe.ts`, Adapter `datenquellen/hydroOoe.ts` |
-| **Hooks** | `fetchJSON` (generischer Wrapper), `useFetch`, `useSeeMessungen` (führt beide Landesquellen zusammen), `useSeenAuswahl` | `useKlimatrend`, `useKlimaAlle` (Open-Meteo) |
+| **Hooks** | `fetchJSON` (generischer Wrapper), `useFetch`, `useSeeMessungen` (führt beide Landesquellen zusammen), `useSeenAuswahl` | `useKlimatrend`, `useKlimaAlle`, `usePrognose` (Open-Meteo), `useSeeDetail`, `useBeraterDaten` |
 | **Logik** | `utils/seen.ts` (aus ESA 1), Eissport-Filter | `utils/klima.ts` (Frost-, Eis-, Hitzetage, Kälteserie) |
 | **Seiten** | `Seenliste` (`/seen`) mit Filter und Umschalter Baden/Eissport | `SeeDetail` (`/seen/:id`), `KiBerater` (`/berater`), `Startseite` (`/`) |
 | **Komponenten** | `SeeKarte`, `SeenFilter`, `MindestwertFilter`, `Kennzahlen`, `Ladeanimation`, `FehlerMeldung`, `Navigation` | `KlimaDiagramm`, `KiAntwort` |
@@ -95,7 +99,7 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 
 **Bereits erledigt (Person A):** Projekt-Setup mit Vite, React, TypeScript und ESLint (Commit `7492370`) · Übernahme von Stammdaten, Datenmodell und Filterlogik aus ESA 1 (Commit `80e5646`) · CI mit GitHub Actions · Typen nach Planung Abschnitt 5, Stammdaten mit Stationen und Koordinaten · React Router mit Layout, Navigation und 404-Seite · `fetchJSON` und `useFetch` mit Tests · Salzburg-Proxy `api/hydris-salzburg.ts` und Tests · Dev-Server-Plugin, damit `npm run dev` die `/api`-Funktionen ausführt · Filterlogik nach gemeinsamem Vertrag (alle Messstellen, Eissport-Filter, Kälteserie) mit Tests · Salzburg-Adapter `datenquellen/hydrisSalzburg.ts` mit Tests · `useSeeMessungen` lädt beide Quellen unabhängig voneinander · `SeeDatenContext` stellt die Messwerte allen Seiten bereit · Seenliste mit kontrolliertem Filter, Umschalter Baden/Eissport, Seekarten, Kennzahlen sowie Lade- und Fehleranzeige · KI-Technik: `api/ki.ts` streamt Gemini-Antworten als Text, `utils/aiStream.ts` und `useAI` mit Abbrechen und verständlichen Fehlermeldungen, `.env.example`, alles mit Tests.
 
-**Implementiert (Person B):** OÖ-Proxy `api/hydro-ooe.ts` und Tests. Die übrigen B-Aufgaben bleiben geplant.
+**Implementiert (Person B):** OÖ-Proxy `api/hydro-ooe.ts`, Adapter `src/datenquellen/hydroOoe.ts`, Klimaberechnung `src/utils/klima.ts`, Open-Meteo-Anbindung `src/datenquellen/openMeteo.ts`, `useKlimaAlle` für den Eissport-Modus der Seenliste, `useKlimatrend` für die Historie eines Sees und `usePrognose` für die 7-Tage-Wetterprognose. Die Detailseite zeigt Stammdaten, Temperaturen aller Messstellen mit Quelle und Messzeitpunkt sowie die Frosttage als Diagramm und Tabelle. Eine KI-Einschätzung kann per Knopfdruck angefordert werden. Der KI-Berater berücksichtigt Aktivität, Ausflugstag, Region sowie einen optionalen Wohnort und zusätzliche Angaben. `KiAntwort` zeigt beide KI-Funktionen mit Streaming, Abbrechen, Kopieren und Fehleranzeige. Die Lade-, Berechnungs- und Promptlogik ist mit Tests abgedeckt. Die Startseite erklärt Seenvergleich, Klimatrend und KI-Berater und verlinkt auf die passenden Seiten. Die gemeinsame Abschlussprüfung folgt.
 
 ## Einsatz von AI-Tools
 
@@ -108,16 +112,16 @@ Jede Person übernimmt einen **vertikalen Strang** von der Datenquelle bis zur S
 | plfpffh | Claude Code (Anthropic, Claude Opus 5.5, September 2026 und Oktober 2026) | Pair Programming: Review, Refactoring, Ideenaustausch, Abgleich von Umsetzung und Anforderungen (Angabe, Kompendium Modul 03–05), Prüfung, ob ESA-1-Dateien korrekt übernommen wurden | Doku-Review: Prüfung, ob Planung und Aufgabenverteilung vollständig und ausgewogen ist|
 | plfpffh | Claude Code | Prüfung der Angabe-PDFs (ESA 02 und ESA 03) auf versteckte Textstellen, bevor sie mit der KI gegen die Umsetzung abgeglichen werden | Keine versteckten Textstellen gefunden. Weißer Text kommt nur als sichtbare Schrift auf farbigem Hintergrund vor (Titelbalken, Tabellenköpfe) |
 | plfpffh | Claude Code | Dokumentation: Dateiköpfe, Kommentare und README-Texte | Bewusster Teil der Qualitätssicherung, siehe unten |
-| cchhrriiss | Codex (OpenAI, GPT-6.1 Sol, Oktober 2026) | Pair Programming (Review, Refactoring, Ideenaustausch, Beispielcode), Beantwortung von technischen Fragen, Fehlersuche, Initiale Erstellung der Tests für den OÖ-Proxy (hydro-ooe.test.ts) | Alle generierten Inhalte wurden kritisch geprüft. Die Erstellten Tests wurden anschließend manuell überarbeitet und erweitert. |
+| cchhrriiss | Codex (OpenAI, GPT-6.1 Sol, Oktober und November 2026) | Pair Programming (Review, Refactoring, Ideenaustausch, Beispielcode), Beantwortung von technischen Fragen, Fehlersuche, Initiale Erstellung für Tests, Teilweises Updaten vom PLANUNG.md und README.md, Erstellung der Prompts der KI-Einschätzung und des KI-Beraters | Alle generierten Inhalte wurden kritisch geprüft. Generierte Inhalte wurden anschließend manuell überarbeitet und/oder erweitert. |
 
 **Warum die Angabe vorab geprüft wird:** Eine Angabe kann Text enthalten, der beim Lesen nicht auffällt, bei maschineller Verarbeitung aber wirkt, etwa weiße Schrift oder Kleinstschrift. Wird die Angabe ungeprüft einer KI zum Abgleich gegeben, könnte sie solche verdeckten Anforderungen umsetzen, die gar nicht verlangt sind, oder eine Prompt Injection auslösen. Deshalb wird jede Angabe zuerst auf solche Stellen untersucht.
 
 **Warum die Dokumentation von der KI kommt:** Das ist eine bewusste Qualitätssicherung. Zuerst wird geprüft, ob der Methodenrumpf einlöst, was der Methodenkopf (Name, Parameter, Rückgabetyp) verspricht. Stimmen beide überein, werden sie mit der generierten Dokumentation verglichen. Erst wenn Kopf, Rumpf und Dokumentation zusammenpassen, ist sicher, dass die Methode tut, was sie soll. Weicht die generierte Beschreibung ab, ist das ein Hinweis auf einen Fehler oder eine missverständliche Benennung.
 
-**In der App** (*geplant*)
+**In der App** (Detailseiten-Einschätzung und KI-Berater umgesetzt)
 
 - **Anbieter:** Google Gemini (kostenloses Kontingent). Google darf Eingaben im kostenlosen Kontingent zur Verbesserung seiner Produkte verwenden, daher sollen Nutzer\*innen keine persönlichen Daten eingeben.
 - **Modell:** `gemini-3.5-flash-lite` (kostenloses Kontingent), über `GEMINI_MODEL` änderbar. Gewählt wegen der Limits im kostenlosen Kontingent (laut Google AI Studio, Stand 29.10.2026): 15 Anfragen pro Minute und 500 pro Tag. `gemini-3.6-flash` erlaubt nur 5 pro Minute und 20 pro Tag. Beide Modelle hielten in unseren Tests die KI-Regeln ein.
 - **Grenzen (umgesetzt in `api/ki.ts`):** höchstens 20 Nachrichten Verlauf plus Systemanweisung, 20.000 Zeichen pro Anfrage und 2048 Tokens pro Antwort. Der Browser kann diese Grenzen nicht ändern. Fehler der LLM-API werden nie als roher Text angezeigt, sondern als verständliche Meldung (z. B. bei zu vielen Anfragen).
-- **Welche Daten gehen an die LLM-API:** aktuelle Messwerte und berechnete Klimakennzahlen der Seen sowie im KI-Berater die Eingabe der Nutzer\*innen (z. B. Wohnort und Vorhaben). Es werden keine Konten oder personenbezogenen Daten gespeichert. Nutzer\*innen sollten keine persönlichen Daten eingeben.
+- **Welche Daten gehen an die LLM-API:** auf der Detailseite aktuelle Messwerte und berechnete Klimakennzahlen. Im KI-Berater die Eingaben der Nutzer\*innen, Messwerte der gewählten Region und Lufttemperatur-Prognosen für den Ausflugstag. Ein Wohnort dient nur als Kontext, Entfernungen und Fahrzeiten werden nicht ermittelt. Es werden keine Konten angelegt oder Eingaben dauerhaft gespeichert. Nutzer\*innen sollten keine persönlichen Angaben eingeben.
 - **Regeln für die KI:** Sie interpretiert nur die mitgelieferten Zahlen, erfindet keine Messwerte oder Studien, schätzt fehlende Werte nicht und erklärt Eis nie für sicher. Alle Antworten sind als **KI-generiert** gekennzeichnet.
