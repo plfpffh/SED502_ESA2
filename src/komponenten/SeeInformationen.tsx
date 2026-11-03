@@ -9,6 +9,7 @@
 
 import type { SeeAnsicht } from '../typen/ansicht';
 import { formatiereTemperatur, formatiereZahl, formatiereZeitpunkt, NICHT_VORHANDEN } from '../utils/format';
+import { messstellenMitWert } from '../utils/seen';
 import FehlerMeldung from './FehlerMeldung';
 import Ladeanimation from './Ladeanimation';
 
@@ -26,7 +27,7 @@ export default function SeeInformationen({ see, isLaden, fehler, neuLaden }: See
     ['Max. Tiefe', `${formatiereZahl(see.maxTiefeM)} m (${see.tiefenkategorie})`],
     ['Seehöhe', `${formatiereZahl(see.seehoeheM)} m ü. A.`],
   ];
-  const vorhandeneMessstellen = see.messstellen.filter((messstelle) => messstelle.temperatur !== null).length;
+  const vorhandeneMessstellen = messstellenMitWert(see);
 
   return (
     <>

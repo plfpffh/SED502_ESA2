@@ -1,7 +1,7 @@
 /**
  * format.ts – Zahlen, Temperaturen und Zeitpunkte für die Anzeige
  *
- * Fehlende Werte (null) werden nie als 0 angezeigt, sondern als „Wert aktuell nicht vorhanden“ (PLANUNG.md, Abschnitt 5).
+ * Fehlende Werte (null) werden nie als 0 angezeigt, sondern als „Wert aktuell nicht vorhanden“ (README: Bewusste Entscheidungen).
  *
  * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
  * @author   Peter Luckmann
@@ -21,7 +21,7 @@ export function formatiereTemperatur(wert: number | null): string {
   return wert === null ? NICHT_VORHANDEN : `${zahl.format(wert)} °C`;
 }
 
-/** Längste Kälteserie: Tage am Stück mit Tagesmittel der Luft unter 0 °C. */
+/** Kälteserie: Tage am Stück mit Tagesmittel der Luft unter 0 °C. */
 export function formatiereKaelteserie(tage: number | null): string {
   if (tage === null) {
     return NICHT_VORHANDEN;
@@ -34,6 +34,7 @@ export function formatiereZeitpunkt(iso: string): string {
   return datumZeit.format(new Date(iso));
 }
 
+/** Reines Datum YYYY-MM-DD als Wochentag und Datum, ohne Verschiebung durch Zeitzonen. */
 export function formatierePrognosetag(iso: string): string {
   return new Intl.DateTimeFormat('de-AT', {
     weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC',

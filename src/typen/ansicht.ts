@@ -31,7 +31,7 @@ export interface MessstelleAnsicht {
   name: string;
   quelle: Datenquelle;
   temperatur: number | null; // °C, null = kein Messwert
-  zeitpunkt?: string | null; // ISO-Zeitstempel, null oder fehlend = nicht vorhanden
+  zeitpunkt: string | null; // ISO-Zeitstempel, null = nicht vorhanden
 }
 
 /** Ein See mit allen für die Anzeige berechneten Werten. */
@@ -42,10 +42,10 @@ export interface SeeAnsicht {
   flaecheKm2: number;
   maxTiefeM: number;
   seehoeheM: number;
-  temperatur: number | null; // Mittelwert aller Messstellen
+  temperatur: number | null; // °C, Mittelwert der Messstellen mit Messwert (eine Nachkommastelle); null = keine Messung
   badeEinschaetzung: string | null;
   tiefenkategorie: Tiefenkategorie;
-  laengsteKaelteserie: number | null; // letzter abgeschlossener Winter; null = keine Klimadaten
+  kaelteserie: number | null; // aktuell: Tage am Stück bis gestern mit Tagesmittel unter 0 °C; null = keine Daten
   messstellen: MessstelleAnsicht[];
 }
 

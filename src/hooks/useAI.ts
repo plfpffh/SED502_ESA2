@@ -1,11 +1,11 @@
 /**
  * useAI.ts – Verlauf, Streaming-Zustand und Fehler eines KI-Chats (Kompendium Modul 05, Abschnitt 4.1)
  *
- * Wie im Kompendium, mit drei Ergänzungen aus PLANUNG.md, Abschnitt 7:
+ * Wie im Kompendium, mit drei Ergänzungen (README: Einsatz von AI-Tools, In der App):
  *  - abbrechen() beendet eine laufende Antwort (AbortController), der bisher empfangene Text bleibt stehen
  *  - jede Nachricht hat eine stabile id als React-Listenkey
  *  - Fehler werden mit beschreibeKiFehler() in verständliche Meldungen übersetzt
- * Wird von Christoph Hauser (Person B) in SeeDetail und KiBerater verwendet.
+ * Verwendet in SeeDetail und in useBeraterAnfrage (KI-Berater), beides von Christoph Hauser (Person B).
  *
  * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
  * @author   Peter Luckmann

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { Readable } from 'node:stream';
 import { test } from 'node:test';
-import ki, { fehlerVonGemini, MAX_NACHRICHTEN, MAX_ZEICHEN, pruefeAnfrage, textAusEreignis, zuGeminiAnfrage } from '../api/ki.ts';
+import ki, { ABBRUCH_HINWEIS, fehlerVonGemini, leseEreignis, MAX_NACHRICHTEN, MAX_ZEICHEN, pruefeAnfrage, zuGeminiAnfrage } from '../api/ki.ts';
 
 // Ausschnitt eines SSE-Ereignisses von streamGenerateContent?alt=sse
 const ereignis = (text: string): string =>
@@ -64,11 +65,20 @@ test('zuGeminiAnfrage: system wird systemInstruction, assistant wird model, Verl
   assert.ok(anfrage.generationConfig.maxOutputTokens > 0);
 });
 
-test('textAusEreignis liest den Text und überspringt Gedanken und kaputte Ereignisse', () => {
-  assert.equal(textAusEreignis(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'Hallo' }] } }] })), 'Hallo');
-  assert.equal(textAusEreignis(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'intern', thought: true }] } }] })), '');
-  assert.equal(textAusEreignis('{kaputt'), '');
-  assert.equal(textAusEreignis(JSON.stringify({ usageMetadata: {} })), '');
+test('leseEreignis liest den Text und überspringt Gedanken und kaputte Ereignisse', () => {
+  const text = (daten: unknown): string => leseEreignis(JSON.stringify(daten)).text;
+  assert.equal(text({ candidates: [{ content: { parts: [{ text: 'Hallo' }] } }] }), 'Hallo');
+  assert.equal(text({ candidates: [{ content: { parts: [{ text: 'intern', thought: true }] } }] }), '');
+  assert.equal(text({ usageMetadata: {} }), '');
+  assert.deepEqual(leseEreignis('{kaputt'), { text: '', blockiert: false });
+});
+
+test('leseEreignis erkennt blockierte Anfragen und abgebrochene Antworten', () => {
+  const blockiert = (daten: unknown): boolean => leseEreignis(JSON.stringify(daten)).blockiert;
+  assert.equal(blockiert({ promptFeedback: { blockReason: 'SAFETY' } }), true);
+  assert.equal(blockiert({ candidates: [{ finishReason: 'PROHIBITED_CONTENT' }] }), true);
+  assert.equal(blockiert({ candidates: [{ content: { parts: [{ text: 'Ende' }] }, finishReason: 'STOP' }] }), false);
+  assert.equal(blockiert({ candidates: [{ finishReason: 'MAX_TOKENS' }] }), false);
 });
 
 test('fehlerVonGemini gibt nie rohe API-Texte weiter', () => {
@@ -119,4 +129,67 @@ test('Fehler von Gemini wird als verständliche JSON-Meldung weitergegeben', asy
   assert.equal(antwort.response.statusCode, 429);
   assert.doesNotMatch(antwort.body(), /Quota/);
   assert.match(antwort.body(), /zu viele Anfragen/);
+});
+
+test('Body aus dem Stream: ein Umlaut, der auf zwei Datenblöcke verteilt ist, bleibt erhalten', async (t) => {
+  process.env.GEMINI_API_KEY = 'test-key';
+  t.after(() => delete process.env.GEMINI_API_KEY);
+  const abruf = t.mock.method(globalThis, 'fetch', async () => sseAntwort([ereignis('ok')]));
+  const body = Buffer.from(JSON.stringify({ nachrichten: [{ role: 'user', content: 'Grüß Gott' }] }));
+  const schnitt = body.indexOf(Buffer.from('ü')) + 1; // mitten im „ü“ (zwei Bytes)
+  const anfrageAusStream = Object.assign(Readable.from([body.subarray(0, schnitt), body.subarray(schnitt)]), { method: 'POST' });
+  const antwort = antwortAufzeichnen();
+  await ki(anfrageAusStream as unknown as IncomingMessage, antwort.response);
+
+  const [, optionen] = abruf.mock.calls[0].arguments as [string, RequestInit];
+  assert.equal(JSON.parse(String(optionen.body)).contents[0].parts[0].text, 'Grüß Gott');
+  assert.equal(antwort.body(), 'ok');
+});
+
+test('blockiert Gemini die Anfrage, gibt es 422 mit verständlicher Meldung statt leerer Antwort', async (t) => {
+  process.env.GEMINI_API_KEY = 'test-key';
+  t.after(() => delete process.env.GEMINI_API_KEY);
+  const blockiert = `data: ${JSON.stringify({ promptFeedback: { blockReason: 'SAFETY' } })}
+
+`;
+  t.mock.method(globalThis, 'fetch', async () => sseAntwort([blockiert]));
+  const antwort = antwortAufzeichnen();
+  await ki(anfrage({ nachrichten: [{ role: 'user', content: 'Hallo' }] }), antwort.response);
+  assert.equal(antwort.response.statusCode, 422);
+  assert.equal(antwort.headers.get('Content-Type'), 'application/json; charset=utf-8');
+  assert.match(antwort.body(), /blockiert/);
+});
+
+test('bricht Gemini die Antwort nach dem ersten Text ab, bleibt der Text stehen und endet mit einem Hinweis', async (t) => {
+  process.env.GEMINI_API_KEY = 'test-key';
+  t.after(() => delete process.env.GEMINI_API_KEY);
+  const abbruch = `data: ${JSON.stringify({ candidates: [{ finishReason: 'SAFETY' }] })}
+
+`;
+  t.mock.method(globalThis, 'fetch', async () => sseAntwort([ereignis('Der Anfang. '), abbruch, ereignis('nie gesendet')]));
+  const antwort = antwortAufzeichnen();
+  await ki(anfrage({ nachrichten: [{ role: 'user', content: 'Hallo' }] }), antwort.response);
+  assert.equal(antwort.response.statusCode, 200);
+  assert.equal(antwort.body(), `Der Anfang. ${ABBRUCH_HINWEIS}`);
+});
+
+test('letztes Ereignis ohne abschließenden Zeilenumbruch wird trotzdem gelesen', async (t) => {
+  process.env.GEMINI_API_KEY = 'test-key';
+  t.after(() => delete process.env.GEMINI_API_KEY);
+  const ohneUmbruch = `data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: 'Ende' }] } }] })}`;
+  t.mock.method(globalThis, 'fetch', async () => sseAntwort([ereignis('Anfang, '), ohneUmbruch]));
+  const antwort = antwortAufzeichnen();
+  await ki(anfrage({ nachrichten: [{ role: 'user', content: 'Hallo' }] }), antwort.response);
+  assert.equal(antwort.body(), 'Anfang, Ende');
+});
+
+test('kommt gar kein Text (z.B. Tokenlimit beim Nachdenken), gibt es 502 statt einer leeren Antwort', async (t) => {
+  process.env.GEMINI_API_KEY = 'test-key';
+  t.after(() => delete process.env.GEMINI_API_KEY);
+  const leer = `data: ${JSON.stringify({ candidates: [{ finishReason: 'MAX_TOKENS' }] })}\r\n\r\n`;
+  t.mock.method(globalThis, 'fetch', async () => sseAntwort([leer]));
+  const antwort = antwortAufzeichnen();
+  await ki(anfrage({ nachrichten: [{ role: 'user', content: 'Hallo' }] }), antwort.response);
+  assert.equal(antwort.response.statusCode, 502);
+  assert.match(antwort.body(), /keine Antwort/);
 });

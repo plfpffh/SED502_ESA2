@@ -147,3 +147,15 @@ test('Open-Meteo: vollständige API-Tagesdaten lassen sich direkt zu Klimakennza
     laengsteKaelteserie: 2, kaeltesumme: -4, hitzetage: 1,
   });
 });
+
+test('Open-Meteo überlastet (503): verständliche Meldung statt „HTTP Fehler 503“, Status bleibt', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () =>
+    Response.json({ error: true, reason: 'The service is overloaded' }, { status: 503, statusText: 'Service Unavailable' }));
+  await assert.rejects(ladeKlimatage(seen[0], '2025-12-31', '2026-01-01'), (fehler: unknown) => {
+    assert.ok(fehler instanceof HttpFehler);
+    assert.equal(fehler.status, 503);
+    assert.doesNotMatch(fehler.message, /HTTP Fehler/);
+    assert.match(fehler.message, /Open-Meteo ist gerade nicht erreichbar/);
+    return true;
+  });
+});

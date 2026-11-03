@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { seen } from '../src/daten/seen.ts';
 import { ladeKlimatrend } from '../src/datenquellen/openMeteo.ts';
-import { berechneKlimatrend } from '../src/utils/klima.ts';
+import { berechneFrosttageVerlauf, berechneKlimatrend } from '../src/utils/klima.ts';
 import type { KlimaTag } from '../src/utils/klima.ts';
 import { HttpFehler } from '../src/utils/fetchJSON.ts';
 
@@ -43,6 +43,15 @@ test('Klimatrend: vollständige Winter sind chronologisch, ohne Vermischung ihre
   assert.deepEqual(tage, vorher);
 });
 
+test('Frosttage-Verlauf: zählt nur aus dem Tagesminimum, Winter mit Lücken fehlen statt zu wenig Frosttage', () => {
+  const tage = tageswerte().map((tag) => ({ ...tag, maximum: null, mittel: null }));
+  assert.deepEqual(berechneFrosttageVerlauf(1950, 1952, tage).map((wert) => wert.frosttage), [90, 91, 90]);
+  const mitLuecke = tage.map((tag) => (tag.datum === '1952-01-10' ? { ...tag, minimum: null } : tag));
+  assert.deepEqual(berechneFrosttageVerlauf(1950, 1952, mitLuecke).map((wert) => wert.winter), ['1950/51', '1952/53']);
+  const ohneFrost = tage.map((tag) => ({ ...tag, minimum: 0 }));
+  assert.deepEqual(berechneFrosttageVerlauf(1950, 1950, ohneFrost), [{ winter: '1950/51', frosttage: 0 }]);
+});
+
 test('Klimatrend: eine Datenlücke entfernt nur den betroffenen Winter, spätere Winter bleiben erhalten', () => {
   const tage = tageswerte().filter((tag) => tag.datum !== '1952-02-29');
   const ergebnis = berechneKlimatrend('attersee', 1950, 1952, tage);
@@ -50,35 +59,52 @@ test('Klimatrend: eine Datenlücke entfernt nur den betroffenen Winter, spätere
   assert.deepEqual(berechneKlimatrend('attersee', 1950, 1952, []), []);
 });
 
-test('Klimatrend: lädt die gesamte Historie in einer Anfrage und reicht das Abbruchsignal weiter', async (t) => {
+/** Die Anfrage mit dem gegebenen daily-Parameter aus den aufgezeichneten fetch-Aufrufen. */
+function anfrageMit(aufrufe: { arguments: unknown[] }[], daily: string) {
+  const aufruf = aufrufe.find((a) => new URL(String(a.arguments[0])).searchParams.get('daily') === daily);
+  assert.ok(aufruf, `keine Anfrage mit daily=${daily}`);
+  return { url: new URL(String(aufruf.arguments[0])), optionen: aufruf.arguments[1] as RequestInit | undefined };
+}
+
+test('Klimatrend: Frosttage-Verlauf nur mit Tagesminimum ab Dezember 1950, letzter Winter mit allen Kennzahlen', async (t) => {
   const abruf = t.mock.method(globalThis, 'fetch', async () => Response.json(apiAntwort()));
   const signal = new AbortController().signal;
   const ergebnis = await ladeKlimatrend(seen[0], signal, HEUTE);
-  assert.equal(abruf.mock.callCount(), 1);
-  const [adresse, optionen] = abruf.mock.calls[0].arguments;
-  const url = new URL(String(adresse));
-  assert.equal(url.searchParams.get('latitude'), String(seen[0].lat));
-  assert.equal(url.searchParams.get('longitude'), String(seen[0].lng));
-  assert.equal(url.searchParams.get('start_date'), '1950-06-01');
-  assert.equal(url.searchParams.get('end_date'), '1953-02-28');
-  assert.equal(optionen?.signal, signal);
-  assert.equal(ergebnis.kennzahlen.length, 3);
+  assert.equal(abruf.mock.callCount(), 2);
+
+  // der lange Verlauf: eine Variable statt drei, damit er bei Open-Meteo nur ein Drittel kostet
+  const verlauf = anfrageMit(abruf.mock.calls, 'temperature_2m_min');
+  assert.equal(verlauf.url.searchParams.get('latitude'), String(seen[0].lat));
+  assert.equal(verlauf.url.searchParams.get('longitude'), String(seen[0].lng));
+  assert.equal(verlauf.url.searchParams.get('start_date'), '1950-12-01');
+  assert.equal(verlauf.url.searchParams.get('end_date'), '1953-02-28');
+  assert.equal(verlauf.optionen?.signal, signal);
+
+  const letzter = anfrageMit(abruf.mock.calls, 'temperature_2m_min,temperature_2m_max,temperature_2m_mean');
+  assert.equal(letzter.url.searchParams.get('start_date'), '1952-06-01');
+
+  assert.deepEqual(ergebnis.frosttage, [
+    { winter: '1950/51', frosttage: 90 }, { winter: '1951/52', frosttage: 91 }, { winter: '1952/53', frosttage: 90 },
+  ]);
+  assert.deepEqual(ergebnis.kennzahlen.map((wert) => wert.winter), ['1952/53']);
   assert.equal(ergebnis.fehler, null);
 });
 
 test('Klimatrend: vor dem 1. März endet die Historie beim Winter des Vorjahres', async (t) => {
   const abruf = t.mock.method(globalThis, 'fetch', async () => Response.json(apiAntwort()));
   const ergebnis = await ladeKlimatrend(seen[0], undefined, new Date('1953-02-28T23:59:59+01:00'));
-  const url = new URL(String(abruf.mock.calls[0].arguments[0]));
+  const { url } = anfrageMit(abruf.mock.calls, 'temperature_2m_min');
   assert.equal(url.searchParams.get('end_date'), '1952-02-29');
-  assert.deepEqual(ergebnis.kennzahlen.map((wert) => wert.winter), ['1950/51', '1951/52']);
+  assert.deepEqual(ergebnis.frosttage.map((wert) => wert.winter), ['1950/51', '1951/52']);
+  assert.deepEqual(ergebnis.kennzahlen.map((wert) => wert.winter), ['1951/52']);
 });
 
 test('Klimatrend: unvollständige Winter erzeugen einen Hinweis, gültige Kennzahlen bleiben bestehen', async (t) => {
-  const tage = tageswerte().filter((tag) => tag.datum !== '1951-06-01');
+  const tage = tageswerte().filter((tag) => tag.datum !== '1951-01-15');
   t.mock.method(globalThis, 'fetch', async () => Response.json(apiAntwort(tage)));
   const ergebnis = await ladeKlimatrend(seen[0], undefined, HEUTE);
-  assert.deepEqual(ergebnis.kennzahlen.map((wert) => wert.winter), ['1950/51', '1952/53']);
+  assert.deepEqual(ergebnis.frosttage.map((wert) => wert.winter), ['1951/52', '1952/53']);
+  assert.deepEqual(ergebnis.kennzahlen.map((wert) => wert.winter), ['1952/53']);
   assert.match(ergebnis.fehler ?? '', /1 Winter.*nicht vollständig/);
 });
 
@@ -86,6 +112,7 @@ test('Klimatrend: eine leere Antwort wird als fehlende Historie und nicht als fe
   t.mock.method(globalThis, 'fetch', async () => Response.json(apiAntwort([])));
   const ergebnis = await ladeKlimatrend(seen[0], undefined, HEUTE);
   assert.deepEqual(ergebnis.kennzahlen, []);
+  assert.deepEqual(ergebnis.frosttage, []);
   assert.match(ergebnis.fehler ?? '', /3 Winter.*nicht vollständig/);
 });
 
@@ -112,7 +139,8 @@ test('Klimatrend: erneutes Laden kann nach einem Fehler wieder Daten liefern', a
   abruf.mock.restore();
   t.mock.method(globalThis, 'fetch', async () => Response.json(apiAntwort()));
   const ergebnis = await ladeKlimatrend(seen[0], undefined, HEUTE);
-  assert.equal(ergebnis.kennzahlen.length, 3);
+  assert.equal(ergebnis.frosttage.length, 3);
+  assert.equal(ergebnis.kennzahlen.length, 1);
   assert.equal(ergebnis.fehler, null);
 });
 
@@ -130,4 +158,15 @@ test('Klimatrend: Abbruch verhindert den Abruf oder verwirft bereits geladene Da
     return Response.json(apiAntwort());
   });
   await assert.rejects(ladeKlimatrend(seen[0], spaeterAbbruch.signal, HEUTE), { name: 'AbortError' });
+});
+
+test('Klimatrend: scheitert nur der lange Verlauf, bleiben die Kennzahlen des letzten Winters mit Hinweis erhalten', async (t) => {
+  t.mock.method(globalThis, 'fetch', async (adresse: string | URL | Request) =>
+    new URL(String(adresse)).searchParams.get('daily') === 'temperature_2m_min'
+      ? new Response('', { status: 429 })
+      : Response.json(apiAntwort()));
+  const ergebnis = await ladeKlimatrend(seen[1], undefined, HEUTE);
+  assert.deepEqual(ergebnis.frosttage, []);
+  assert.deepEqual(ergebnis.kennzahlen.map((wert) => wert.winter), ['1952/53']);
+  assert.match(ergebnis.fehler ?? '', /Anfragelimit/);
 });

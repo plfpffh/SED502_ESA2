@@ -86,10 +86,12 @@ export function beschreibeKiFehler(fehler: Error): string {
 }
 
 /**
- * Baut den Verlauf für die Anfrage: optional die Systemanweisung, dann die letzten maxNachrichten Nachrichten.
+ * Baut den Verlauf für die Anfrage: optional die Systemanweisung, dann die letzten maxNachrichten Nachrichten
+ * (bei 0 keine).
  * Leere Nachrichten (z.B. eine abgebrochene Antwort ohne Text) werden nicht mitgeschickt.
  */
 export function baueVerlauf(verlauf: Nachricht[], systemPrompt: string | undefined, maxNachrichten: number): Nachricht[] {
-  const gekuerzt = verlauf.filter((n) => n.content.trim() !== '').slice(-maxNachrichten);
+  // slice(-0) würde alles liefern, deshalb 0 eigens behandeln
+  const gekuerzt = maxNachrichten > 0 ? verlauf.filter((n) => n.content.trim() !== '').slice(-maxNachrichten) : [];
   return systemPrompt ? [{ id: 'system', role: 'system', content: systemPrompt }, ...gekuerzt] : gekuerzt;
 }

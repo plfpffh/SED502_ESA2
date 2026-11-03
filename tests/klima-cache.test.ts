@@ -91,12 +91,13 @@ test('Klima-Cache: wiederholter Trendabruf und anschließende Seenliste benötig
   const abruf = t.mock.method(globalThis, 'fetch', async () => Response.json(historischeAntwort()));
   const heute = new Date('1953-10-31T12:00:00+01:00');
   const erst = await ladeKlimatrend(seen[0], undefined, heute);
+  assert.equal(abruf.mock.callCount(), 2); // Frosttage-Verlauf und letzter Winter
   const wiederholt = await ladeKlimatrend(seen[0], undefined, heute);
   assert.deepEqual(wiederholt, erst);
-  assert.equal(abruf.mock.callCount(), 1);
+  assert.equal(abruf.mock.callCount(), 2);
   const liste = await ladeWinterKennzahlen([seen[0]], 1952);
-  assert.deepEqual(liste.kennzahlen, [erst.kennzahlen.at(-1)]);
-  assert.equal(abruf.mock.callCount(), 1);
+  assert.deepEqual(liste.kennzahlen, erst.kennzahlen);
+  assert.equal(abruf.mock.callCount(), 2);
 });
 
 test('Klima-Cache: HTTP 429 bleibt erneut abrufbar und erhält eine verständliche Meldung', async (t) => {
@@ -110,19 +111,19 @@ test('Klima-Cache: HTTP 429 bleibt erneut abrufbar und erhält eine verständlic
       return true;
     });
   }
-  assert.equal(abruf.mock.callCount(), 2);
+  assert.equal(abruf.mock.callCount(), 4); // je Versuch Verlauf und letzter Winter, nichts aus dem Cache
 });
 
 test('Klima-Cache: unvollständige Historien werden nicht als erfolgreicher Cache gespeichert', async (t) => {
   browserCache(t);
   const daten = historischeAntwort();
   daten.daily.temperature_2m_mean[0] = Number.NaN;
-  // Das Sommermittel wird nicht benötigt, der letzte Wintertag hingegen schon.
-  daten.daily.temperature_2m_mean[daten.daily.time.length - 1] = Number.NaN;
+  // Das Sommermittel wird nicht benötigt, der letzte Wintertag hingegen schon (für Verlauf und Kennzahlen).
+  daten.daily.temperature_2m_min[daten.daily.time.length - 1] = Number.NaN;
   const abruf = t.mock.method(globalThis, 'fetch', async () => Response.json(daten));
   const heute = new Date('1953-10-31');
   const ergebnis = await ladeKlimatrend(seen[0], undefined, heute);
   assert.ok(ergebnis.fehler);
   await ladeKlimatrend(seen[0], undefined, heute);
-  assert.equal(abruf.mock.callCount(), 2);
+  assert.equal(abruf.mock.callCount(), 4); // beim zweiten Mal wieder beide Anfragen, nichts aus dem Cache
 });

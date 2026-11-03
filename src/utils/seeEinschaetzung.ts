@@ -8,15 +8,22 @@
  */
 
 import type { SeeAnsicht } from '../typen/ansicht.ts';
-import type { Klimakennzahlen } from '../typen/klima.ts';
+import type { FrosttageWinter, Klimakennzahlen } from '../typen/klima.ts';
+import { formatiereZeitpunkt } from './format.ts';
 import { letzterAbgeschlossenerWinter } from './klima.ts';
 
+/**
+ * klima: Kennzahlen (mindestens des letzten Winters). frosttage: eigener Verlauf ab 1950 (Detailseite);
+ * fehlt er, wird der Frosttage-Verlauf aus klima gebildet.
+ */
 export function baueSeeEinschaetzung(
-  see: SeeAnsicht, klima: Klimakennzahlen[], klimaFehler: string | null, heute = new Date(),
+  see: SeeAnsicht, klima: Klimakennzahlen[], klimaFehler: string | null, heute = new Date(), frosttage?: FrosttageWinter[],
 ): string {
   const startjahr = letzterAbgeschlossenerWinter(heute);
   const winter = `${startjahr}/${String(startjahr + 1).slice(-2)}`;
   const historie = klima.filter((wert) => wert.seeId === see.id && wert.winter <= winter)
+    .sort((a, b) => a.winter.localeCompare(b.winter));
+  const verlauf = (frosttage ?? historie).filter((wert) => wert.winter <= winter)
     .sort((a, b) => a.winter.localeCompare(b.winter));
   const daten = {
     see: see.name,
@@ -30,18 +37,19 @@ export function baueSeeEinschaetzung(
         name: messstelle.name,
         quelle: messstelle.quelle,
         temperatur: messstelle.temperatur,
-        messzeitpunkt: messstelle.zeitpunkt ?? null,
+        // wie auf der Seite in Wiener Zeit, damit die KI keinen UTC-Zeitstempel wiedergibt
+        messzeitpunkt: messstelle.zeitpunkt ? `${formatiereZeitpunkt(messstelle.zeitpunkt)} (Wiener Zeit)` : null,
         status: messstelle.temperatur === null ? 'Kein Messwert verfügbar, nicht schätzen' : 'Messwert verfügbar',
       })),
     },
     klima: {
       quelle: 'Open-Meteo, ERA5-Reanalysedaten der Lufttemperatur am Standort des Sees',
-      status: historie.length === 0 ? 'Keine Klimakennzahlen verfügbar' : klimaFehler ? 'Teilweise verfügbar' : 'Verfügbar',
+      status: historie.length === 0 && verlauf.length === 0 ? 'Keine Klimakennzahlen verfügbar' : klimaFehler ? 'Teilweise verfügbar' : 'Verfügbar',
       hinweis: klimaFehler,
       winterDefinition: 'Dezember bis Februar. Hitzetage beziehen sich auf Juni bis August vor dem Winter.',
       letzterAbgeschlossenerWinter: winter,
       kennzahlenLetzterWinter: historie.find((wert) => wert.winter === winter) ?? null,
-      frosttageProWinter: historie.map((wert) => ({ winter: wert.winter, frosttage: wert.frosttage })),
+      frosttageProWinter: verlauf.map((wert) => ({ winter: wert.winter, frosttage: wert.frosttage })),
     },
   };
 

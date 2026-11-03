@@ -44,5 +44,13 @@ export async function fetchJSON<T>(url: string, optionen?: RequestInit): Promise
     throw new HttpFehler(antwort.status, meldung);
   }
 
-  return antwort.json() as Promise<T>;
+  try {
+    return (await antwort.json()) as T;
+  } catch (fehler) {
+    // Status 200, aber kein JSON (z.B. eine Fehlerseite als Text): nie die rohe Meldung von JSON.parse anzeigen
+    if (fehler instanceof SyntaxError) {
+      throw new Error('Die Datenquelle hat keine gültigen Daten geliefert. Bitte später erneut versuchen.', { cause: fehler });
+    }
+    throw fehler; // z.B. Abbruch während des Lesens, wird vom Aufrufer erkannt
+  }
 }

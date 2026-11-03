@@ -1,12 +1,15 @@
 /**
- * Gemeinsame Funktionsverträge aus PLANUNG.md, Abschnitt 5.
+ * Gemeinsame Funktionsverträge (README: Vorgehen in der Gruppe).
  * Reine TypeScript-Typen: Hier werden keine Funktionen oder Hooks implementiert.
  * Beispiel für eine spätere Implementierung:
  *   export const zuSeeMessungen: ZuSeeMessungen = (roh, seen) => { ... };
+ *
+ * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
+ * @author   Christoph Hauser, Peter Luckmann
  */
 import type { See } from './see.ts';
 import type { SeeMessung } from './messung.ts';
-import type { Klimakennzahlen } from './klima.ts';
+import type { AktuelleKaelteserie, FrosttageWinter, Klimakennzahlen } from './klima.ts';
 import type { Auswahl, Filter, SeeAnsicht } from './ansicht.ts';
 import type { Nachricht } from './ai.ts';
 import type { SeePrognose } from './prognose.ts';
@@ -37,31 +40,35 @@ export type UseSeeMessungen = () => {
   neuLaden: () => void;
 };
 
-/** utils/seen.ts: Klimawerte des letzten abgeschlossenen Winters für die Liste. */
+/** utils/seen.ts: aktuelle Kälteserien (bis gestern) für den Eissport-Modus der Liste. */
 export type WaehleSeen = (
   seen: See[],
   messungen: SeeMessung[],
-  klima: Klimakennzahlen[],
+  kaelteserien: AktuelleKaelteserie[],
   filter: Filter,
 ) => Auswahl;
 
 /**
  * utils/seen.ts: Alle erwarteten Stationen darstellen, fehlende Werte als null.
- * laengsteKaelteserie zunächst auf null setzen; waehleSeen ergänzt den Klimawert.
+ * kaelteserie zunächst auf null setzen; waehleSeen ergänzt die aktuelle Kälteserie.
  */
 export type ZuAnsicht = (see: See, messungen: SeeMessung[]) => SeeAnsicht;
 
-/** hooks/useKlimatrend.ts: Historie eines Sees für die Detailseite. */
+/**
+ * hooks/useKlimatrend.ts: Historie eines Sees für die Detailseite.
+ * kennzahlen: vollständige Kennzahlen des letzten abgeschlossenen Winters; frosttage: Verlauf ab 1950.
+ */
 export type UseKlimatrend = (see: See) => {
   kennzahlen: Klimakennzahlen[];
+  frosttage: FrosttageWinter[];
   isLaden: boolean;
   fehler: string | null;
   neuLaden: () => void;
 };
 
-/** hooks/useKlimaAlle.ts: Pro See nur den letzten abgeschlossenen Winter liefern. */
-export type UseKlimaAlle = (seen: See[]) => {
-  kennzahlen: Klimakennzahlen[];
+/** hooks/useKaelteserien.ts: aktuelle Kälteserie bis gestern für alle Seen (Eissport-Modus der Seenliste). */
+export type UseKaelteserien = (seen: See[]) => {
+  kaelteserien: AktuelleKaelteserie[];
   isLaden: boolean;
   fehler: string | null;
   neuLaden: () => void;

@@ -1,6 +1,6 @@
 /**
  * KI-Proxy: Leitet einen Chatverlauf an Google Gemini weiter und streamt die Antwort als reinen Text zurück.
- * Der API-Key (GEMINI_API_KEY) wird nur hier gelesen und verlässt nie den Server (PLANUNG.md, Abschnitt 4 und 7).
+ * Der API-Key (GEMINI_API_KEY) wird nur hier gelesen und verlässt nie den Server (README: Warum der API-Key nicht im Browser liegt).
  *
  * Anfrage:  POST /api/ki  { nachrichten: { role: 'system' | 'user' | 'assistant', content: string }[] }
  * Antwort:  text/plain, Stück für Stück, sobald Gemini liefert. Fehler vor dem Stream als JSON { fehler }.
@@ -10,6 +10,9 @@
  *
  * Kosten begrenzen: höchstens MAX_NACHRICHTEN Nachrichten und MAX_ZEICHEN Zeichen pro Anfrage,
  * die Länge der Antwort begrenzt MAX_AUSGABE_TOKENS. Der Browser kann diese Grenzen nicht ändern.
+ *
+ * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
+ * @author   Peter Luckmann
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
@@ -86,21 +89,35 @@ export function zuGeminiAnfrage(nachrichten: KiNachricht[]): GeminiAnfrage {
   };
 }
 
-/** Liest den Text aus einem SSE-Ereignis von Gemini (candidates[0].content.parts[].text), sonst ''. */
-export function textAusEreignis(daten: string): string {
+// finishReason-Werte, mit denen Gemini eine Antwort aus Sicherheits- oder Urheberrechtsgründen abbricht
+const BLOCKIER_GRUENDE = new Set(['SAFETY', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII', 'RECITATION']);
+
+export interface GeminiEreignis {
+  text: string; // Text aus candidates[0].content.parts[].text ohne Denk-Teile (thought), sonst ''
+  blockiert: boolean;
+}
+
+/** Liest Text und Blockierung aus einem SSE-Ereignis von Gemini. Kaputte Ereignisse ergeben leeren Text. */
+export function leseEreignis(daten: string): GeminiEreignis {
   let ereignis: unknown;
   try {
     ereignis = JSON.parse(daten);
   } catch {
-    return '';
+    return { text: '', blockiert: false };
   }
   const kandidat = istObjekt(ereignis) && Array.isArray(ereignis.candidates) ? ereignis.candidates[0] : undefined;
   const inhalt = istObjekt(kandidat) ? kandidat.content : undefined;
   const teile = istObjekt(inhalt) && Array.isArray(inhalt.parts) ? inhalt.parts : [];
-  return teile
+  const text = teile
     .filter((teil): teil is Record<string, unknown> => istObjekt(teil) && typeof teil.text === 'string' && teil.thought !== true)
     .map((teil) => teil.text as string)
     .join('');
+  // blockiert: entweder die ganze Anfrage (promptFeedback.blockReason, dann ohne candidates) oder die Antwort (finishReason)
+  const feedback = istObjekt(ereignis) ? ereignis.promptFeedback : undefined;
+  const blockiert =
+    (istObjekt(feedback) && typeof feedback.blockReason === 'string') ||
+    (istObjekt(kandidat) && BLOCKIER_GRUENDE.has(String(kandidat.finishReason)));
+  return { text, blockiert };
 }
 
 /** Verständliche Meldung je nach Status von Gemini; der rohe Fehlertext der API wird nie weitergegeben. */
@@ -118,18 +135,24 @@ export function fehlerVonGemini(status: number): AnfrageFehler {
 /**
  * Liest den JSON-Body. Auf Vercel ist er bereits als request.body gelesen,
  * im Vite-Dev-Server (vite-plugin-api.ts) wird er hier aus dem Stream gelesen.
+ * MAX_BODY_BYTES greift nur im Dev-Server, auf Vercel gilt das Limit der Plattform. MAX_NACHRICHTEN und
+ * MAX_ZEICHEN prüft pruefeAnfrage in beiden Fällen.
  */
 async function leseBody(request: IncomingMessage): Promise<unknown> {
   const vorab = (request as IncomingMessage & { body?: unknown }).body;
   if (vorab !== undefined) {
     return typeof vorab === 'string' ? JSON.parse(vorab) : vorab;
   }
-  let text = '';
+  // erst alle Bytes sammeln, dann dekodieren: ein Umlaut kann auf zwei Datenblöcke verteilt sein
+  const teile: Buffer[] = [];
+  let bytes = 0;
   for await (const teil of request) {
-    text += String(teil);
-    if (text.length > MAX_BODY_BYTES) throw new AnfrageFehler(413, 'Die Anfrage an die KI ist zu lang.');
+    const puffer = Buffer.isBuffer(teil) ? teil : Buffer.from(String(teil));
+    bytes += puffer.length;
+    if (bytes > MAX_BODY_BYTES) throw new AnfrageFehler(413, 'Die Anfrage an die KI ist zu lang.');
+    teile.push(puffer);
   }
-  return JSON.parse(text);
+  return JSON.parse(Buffer.concat(teile).toString('utf8'));
 }
 
 function sendeFehler(response: ServerResponse, status: number, meldung: string): void {
@@ -138,20 +161,50 @@ function sendeFehler(response: ServerResponse, status: number, meldung: string):
   response.end(JSON.stringify({ fehler: meldung }));
 }
 
-/** Liest den SSE-Stream von Gemini und schreibt nur den Text in die Antwort. */
+/** Hinweis am Ende einer Antwort, die Gemini mittendrin abgebrochen hat, damit sie nicht vollständig wirkt. */
+export const ABBRUCH_HINWEIS = '\n\n(Die KI hat die Antwort an dieser Stelle abgebrochen.)';
+
+/**
+ * Liest den SSE-Stream von Gemini und schreibt nur den Text in die Antwort.
+ * Blockiert Gemini, bevor Text geschrieben wurde, gibt es einen Fehler (422) statt einer leeren Antwort.
+ * Blockiert Gemini mitten in der Antwort, endet sie mit dem bisherigen Text und ABBRUCH_HINWEIS.
+ * Kommt gar kein Text (z.B. Tokenlimit schon beim Nachdenken erreicht), gibt es einen Fehler (502).
+ */
 async function streameText(quelle: ReadableStream<Uint8Array>, response: ServerResponse): Promise<void> {
   const decoder = new TextDecoder();
   let puffer = '';
+  let geschrieben = false;
+
+  /** Verarbeitet eine SSE-Zeile; true, wenn die Antwort damit endet. */
+  const verarbeite = (zeile: string): boolean => {
+    if (!zeile.startsWith('data:')) return false;
+    const { text, blockiert } = leseEreignis(zeile.slice(5).trim());
+    if (text) {
+      response.write(text);
+      geschrieben = true;
+    }
+    if (!blockiert) return false;
+    if (!geschrieben) {
+      throw new AnfrageFehler(422, 'Die KI hat diese Anfrage nicht beantwortet (vom Anbieter blockiert). Bitte die Frage anders formulieren.');
+    }
+    response.write(ABBRUCH_HINWEIS);
+    return true;
+  };
+
   for await (const teil of quelle) {
     puffer += decoder.decode(teil, { stream: true });
     // ein Chunk kann mitten in einer Zeile enden: die letzte, unvollständige Zeile bleibt im Puffer
     const zeilen = puffer.split('\n');
     puffer = zeilen.pop() ?? '';
     for (const zeile of zeilen) {
-      if (!zeile.startsWith('data:')) continue;
-      const text = textAusEreignis(zeile.slice(5).trim());
-      if (text) response.write(text);
+      if (verarbeite(zeile)) return;
     }
+  }
+  // letzte Zeile ohne abschließenden Zeilenumbruch nicht verlieren
+  puffer += decoder.decode();
+  if (verarbeite(puffer)) return;
+  if (!geschrieben) {
+    throw new AnfrageFehler(502, 'Die KI hat keine Antwort geliefert. Bitte erneut versuchen.');
   }
 }
 

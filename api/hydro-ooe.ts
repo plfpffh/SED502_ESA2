@@ -1,6 +1,9 @@
 /**
  * OÖ-Proxy: Lädt Wassertemperaturen der OÖ Seen serverseitig.
  * Quelle und Feldnamen geprüft am 11.10.2026. Das undokumentierte Format kann sich ändern.
+ *
+ * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
+ * @author   Christoph Hauser
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
@@ -23,6 +26,10 @@ interface HydroOoeMessstelle {
   timestamp: string | null;
 }
 
+/**
+ * Liefert nur die Stationen der Stammdaten. Strenger als der Salzburg-Proxy: Ein unerwarteter Eintrag oder eine
+ * ausgewählte Station mit falschem Parameter oder Format macht die ganze Antwort ungültig (Fehler, 502).
+ */
 export function filtereSeenStationen(roh: unknown): HydroOoeMessstelle[] {
   if (!Array.isArray(roh)) {
     throw new Error('Die OÖ-Datenquelle liefert kein Stationsarray.');

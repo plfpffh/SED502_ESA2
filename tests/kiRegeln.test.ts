@@ -7,7 +7,7 @@ test('Regeln enthalten den Pflichtsatz wörtlich, wie er in der App steht', () =
   assert.ok(KI_REGELN.includes(EIS_PFLICHTSATZ));
 });
 
-test('Regeln aus PLANUNG.md, Abschnitt 8, sind enthalten', () => {
+test('die vereinbarten Regeln für die KI sind enthalten', () => {
   for (const regel of [/nur die Zahlen|ausschließlich die Zahlen/, /schätze ihn nicht/, /nie, dass Eis tragfähig/, /klimatischer Hinweis/]) {
     assert.match(KI_REGELN, regel);
   }
