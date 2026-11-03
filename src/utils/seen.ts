@@ -2,7 +2,7 @@
  * seen.ts – Geschäftslogik (Logikschicht)
  *
  * Reine Funktionen ohne DOM-Zugriff: Umwandeln, Filtern, Sortieren, Auswerten.
- * Stammdaten, Messungen und Klimakennzahlen kommen als Parameter, die Funktionen laden nichts selbst.
+ * Stammdaten, Messungen und aktuelle Kälteserien kommen als Parameter, die Funktionen laden nichts selbst.
  * Komponenten und Seiten dürfen nur SeeAnsicht-Objekte erhalten.
  *
  * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
@@ -12,7 +12,7 @@
 // mit Endung, weil auch die Tests (Node) diese Datei laden
 import type { See } from '../typen/see.ts';
 import type { SeeMessung } from '../typen/messung.ts';
-import type { Klimakennzahlen } from '../typen/klima.ts';
+import type { AktuelleKaelteserie } from '../typen/klima.ts';
 import type { Auswahl, Filter, MessstelleAnsicht, SeeAnsicht, Statistik, Tiefenkategorie } from '../typen/ansicht.ts';
 
 /** Mittelwert aller Messungen eines Sees, auf eine Nachkommastelle gerundet. */
@@ -35,19 +35,33 @@ export function tiefenkategorie(see: See): Tiefenkategorie {
   return 'tief';
 }
 
+/** Ab dieser Wassertemperatur (Einordnung „frisch“) gilt ein See als zum Baden geeignet, z.B. im KI-Berater. */
+export const BADEN_AB_TEMPERATUR = 16;
+
 /** Kurze Einordnung der Wassertemperatur für Badegäste. */
 export function badeEinschaetzung(temperatur: number): string {
   if (temperatur >= 24) return 'warm';
   if (temperatur >= 20) return 'angenehm';
-  if (temperatur >= 16) return 'frisch';
+  if (temperatur >= BADEN_AB_TEMPERATUR) return 'frisch';
   return 'kalt';
+}
+
+/** Ab so vielen Tagen am Stück mit Tagesmittel der Luft unter 0 °C gilt Eislaufen als klimatisch möglich (README). */
+export const KAELTESERIE_EISLAUFEN = 14;
+
+/**
+ * Kurze Einordnung der aktuellen Kälteserie (Tage am Stück bis gestern), analog zur badeEinschaetzung.
+ * Nur ein klimatischer Hinweis: Über Eisdicke und Freigaben sagt sie nichts.
+ */
+export function eisEinschaetzung(kaelteserie: number): string {
+  return kaelteserie >= KAELTESERIE_EISLAUFEN ? 'Eislaufen klimatisch möglich' : 'zu mild für Eislaufen';
 }
 
 /**
  * Wandelt Stammdaten und Messungen eines Sees in die Form für die Anzeige um.
  * Alle Stationen aus den Stammdaten erscheinen, ohne Messung mit Temperatur und Zeitpunkt null.
  * messungen darf alle Seen enthalten, zugeordnet wird über seeId, quelle und messstelle.
- * laengsteKaelteserie bleibt null, waehleSeen ergänzt sie aus den Klimakennzahlen.
+ * kaelteserie bleibt null, waehleSeen ergänzt die aktuelle Kälteserie.
  */
 export function zuAnsicht(see: See, messungen: SeeMessung[]): SeeAnsicht {
   const eigene = messungen.filter((m) => m.seeId === see.id);
@@ -73,9 +87,14 @@ export function zuAnsicht(see: See, messungen: SeeMessung[]): SeeAnsicht {
     temperatur,
     badeEinschaetzung: temperatur === null ? null : badeEinschaetzung(temperatur),
     tiefenkategorie: tiefenkategorie(see),
-    laengsteKaelteserie: null,
+    kaelteserie: null,
     messstellen,
   };
+}
+
+/** Anzahl der Messstellen eines Sees, die gerade einen Wert liefern. */
+export function messstellenMitWert(see: SeeAnsicht): number {
+  return see.messstellen.filter((messstelle) => messstelle.temperatur !== null).length;
 }
 
 /** Absteigend vergleichen, fehlende Werte (null) ans Ende. */
@@ -86,12 +105,13 @@ function absteigend(a: number | null, b: number | null): number {
   return b - a;
 }
 
+/** Vergleich für die Sortierung: Zahlen absteigend (fehlende Werte ans Ende), Name alphabetisch. */
 function vergleiche(a: SeeAnsicht, b: SeeAnsicht, sortierung: Filter['sortierung']): number {
   switch (sortierung) {
     case 'temperatur':
       return absteigend(a.temperatur, b.temperatur);
     case 'kaelteserie':
-      return absteigend(a.laengsteKaelteserie, b.laengsteKaelteserie);
+      return absteigend(a.kaelteserie, b.kaelteserie);
     case 'tiefe':
       return b.maxTiefeM - a.maxTiefeM;
     case 'flaeche':
@@ -103,7 +123,7 @@ function vergleiche(a: SeeAnsicht, b: SeeAnsicht, sortierung: Filter['sortierung
 
 /** Der Wert, nach dem im jeweiligen Modus gefiltert wird: Wassertemperatur oder Kälteserie. */
 function wertFuerAktivitaet(see: SeeAnsicht, aktivitaet: Filter['aktivitaet']): number | null {
-  return aktivitaet === 'baden' ? see.temperatur : see.laengsteKaelteserie;
+  return aktivitaet === 'baden' ? see.temperatur : see.kaelteserie;
 }
 
 /**
@@ -155,21 +175,17 @@ export function berechneStatistik(auswahl: SeeAnsicht[]): Statistik {
   };
 }
 
-/**
- * Längste Kälteserie des letzten Winters eines Sees.
- * useKlimaAlle liefert nur den letzten Winter; falls doch mehrere vorliegen, zählt der jüngste.
- */
-function kaelteserie(seeId: string, klima: Klimakennzahlen[]): number | null {
-  const letzter = klima
-    .filter((k) => k.seeId === seeId)
-    .reduce<Klimakennzahlen | null>((juengster, k) => (juengster === null || k.winter > juengster.winter ? k : juengster), null);
-  return letzter?.laengsteKaelteserie ?? null;
+/** Aktuelle Kälteserie eines Sees, null wenn für ihn keine vorliegt. */
+function kaelteserieVon(seeId: string, kaelteserien: AktuelleKaelteserie[]): number | null {
+  return kaelteserien.find((k) => k.seeId === seeId)?.tage ?? null;
 }
 
 /** Schnittstelle für die GUI: gefilterte Seen samt Kennzahlen. */
-export function waehleSeen(seen: See[], messungen: SeeMessung[], klima: Klimakennzahlen[], filter: Filter): Auswahl {
+export function waehleSeen(
+  seen: See[], messungen: SeeMessung[], kaelteserien: AktuelleKaelteserie[], filter: Filter,
+): Auswahl {
   const auswahl = filtereSeen(
-    seen.map((see) => ({ ...zuAnsicht(see, messungen), laengsteKaelteserie: kaelteserie(see.id, klima) })),
+    seen.map((see) => ({ ...zuAnsicht(see, messungen), kaelteserie: kaelteserieVon(see.id, kaelteserien) })),
     filter,
   );
   return {

@@ -72,3 +72,9 @@ test('baueVerlauf: Systemanweisung vorne, Verlauf gekürzt, leere Antworten weg'
   assert.equal(ergebnis[0].role, 'system');
   assert.deepEqual(baueVerlauf(verlauf, undefined, 1).map((n) => n.content), ['vier']);
 });
+
+test('baueVerlauf: maxNachrichten 0 schickt keinen Verlauf mit, nur die Systemanweisung', () => {
+  const verlauf: Nachricht[] = [{ id: 'a', role: 'user', content: 'eins' }];
+  assert.deepEqual(baueVerlauf(verlauf, 'Regeln', 0).map((n) => n.content), ['Regeln']);
+  assert.deepEqual(baueVerlauf(verlauf, undefined, 0), []);
+});

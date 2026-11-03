@@ -2,7 +2,7 @@
  * SeeKarte.tsx – Karte eines Sees in der Seenliste
  *
  * Reine Darstellung, alle Werte sind in SeeAnsicht bereits berechnet.
- * Im Modus Baden steht die Wassertemperatur oben, im Modus Eissport die Kälteserie des letzten Winters;
+ * Im Modus Baden steht die Wassertemperatur oben, im Modus Eissport die aktuelle Kälteserie bis gestern;
  * die Wassertemperatur bleibt dann in den Fakten sichtbar.
  *
  * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
@@ -12,6 +12,7 @@
 import { Link } from 'react-router';
 import type { Aktivitaet, MessstelleAnsicht, SeeAnsicht } from '../typen/ansicht';
 import { formatiereKaelteserie, formatiereTemperatur, formatiereZahl, formatiereZeitpunkt } from '../utils/format';
+import { eisEinschaetzung } from '../utils/seen';
 
 interface SeeKarteProps {
   see: SeeAnsicht;
@@ -41,7 +42,10 @@ function Messstelle({ messstelle }: MessstelleProps): React.JSX.Element {
 
 function hauptwert(see: SeeAnsicht, aktivitaet: Aktivitaet): string {
   if (aktivitaet === 'eissport') {
-    return formatiereKaelteserie(see.laengsteKaelteserie);
+    if (see.kaelteserie === null) {
+      return formatiereKaelteserie(null);
+    }
+    return `Aktuell: ${formatiereKaelteserie(see.kaelteserie)} · ${eisEinschaetzung(see.kaelteserie)}`;
   }
   if (see.temperatur === null) {
     return formatiereTemperatur(null);

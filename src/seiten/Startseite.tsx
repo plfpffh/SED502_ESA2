@@ -8,15 +8,17 @@
  */
 
 import { Link } from 'react-router';
-import { seen } from '../daten/seen';
+import { useAnzahlSeen } from '../hooks/useStammdaten';
 import { EIS_PFLICHTSATZ } from '../utils/kiRegeln';
+import { KAELTESERIE_EISLAUFEN } from '../utils/seen';
 
 export default function Startseite(): React.JSX.Element {
+  const anzahlSeen = useAnzahlSeen();
   return (
     <>
       <h1>Seen im Klimawandel</h1>
       <p>
-        Wie warm ist das Wasser in den Seen zum Baden? Wie hat sich die Zahl der Frosttage im historischen Verlaufverändert? Vergleiche {seen.length} Seen in Salzburg und Oberösterreich und prüfe Ideen für deinen nächsten Ausflug.
+        Wie warm ist das Wasser in den Seen zum Baden? Wie hat sich die Zahl der Frosttage im historischen Verlauf verändert? Vergleiche {anzahlSeen} Seen in Salzburg und Oberösterreich und prüfe Ideen für deinen nächsten Ausflug.
       </p>
 
       <div className="start-angebote">
@@ -24,7 +26,7 @@ export default function Startseite(): React.JSX.Element {
           <h2>Seen im Vergleich</h2>
           <p>
             Prüfe die zuletzt gemessenen Wassertemperaturen aller Seen. Grenze die Auswahl nach Bundesland,
-            Tiefe oder Temperatur ein und vergleiche die Kälteserien des letzten abgeschlossenen Winters.
+            Tiefe oder Temperatur ein und vergleiche im Modus Eissport die aktuellen Kälteserien.
           </p>
           <Link to="/seen">Seenübersicht öffnen</Link>
         </section>
@@ -40,7 +42,7 @@ export default function Startseite(): React.JSX.Element {
           <h2>Deinen Ausflug planen</h2>
           <p>
             Wähle eine Region, einen Tag sowie die gewünschte Aktivität (Baden oder Eissport). Der KI-Berater vergleicht die vorhandenen
-            Wassertemperaturen und die Lufttemperatur-Vorehersagen für deinen Ausflug innerhalb der nächsten sieben
+            Wassertemperaturen und die Lufttemperatur-Vorhersagen für deinen Ausflug innerhalb der nächsten sieben
             Tage.
           </p>
           <Link to="/berater">KI-Berater öffnen</Link>
@@ -55,9 +57,9 @@ export default function Startseite(): React.JSX.Element {
           Wassertemperaturen bereit. Fehlende Werte werden gekennzeichnet.
         </p>
         <p>
-          Die Kälteserie zeigt die längste Abfolge von Tagen mit einer mittleren Lufttemperatur unter 0 °C im
-          letzten abgeschlossenen Winter von Dezember bis Februar. Sie beschreibt vergangenes Wetter, lässt aber
-          keine Aussage über die aktuelle Eisdicke zu. {EIS_PFLICHTSATZ}
+          Die Kälteserie zählt, wie viele Tage am Stück bis gestern das Tagesmittel der Lufttemperatur am See
+          unter 0 °C lag. Ab {KAELTESERIE_EISLAUFEN} Tagen gilt Eislaufen als klimatisch möglich. Sie lässt aber keine Aussage über die
+          aktuelle Eisdicke zu. {EIS_PFLICHTSATZ}
         </p>
       </section>
     </>

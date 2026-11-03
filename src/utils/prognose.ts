@@ -1,4 +1,11 @@
-/** 7 Kalendertage */
+/**
+ * prognose.ts – die Tage, für die der KI-Berater eine Wetterprognose anbietet
+ *
+ * @project FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
+ * @author Christoph Hauser
+ */
+
+/** Heute und die sechs folgenden Kalendertage in Wien, als YYYY-MM-DD. */
 export function prognoseTage(heute = new Date()): string[] {
   const teile = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/Vienna', year: 'numeric', month: '2-digit', day: '2-digit',

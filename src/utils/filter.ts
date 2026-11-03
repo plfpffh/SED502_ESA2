@@ -9,13 +9,14 @@
 
 // mit Endung, weil auch die Tests (Node) diese Datei laden
 import type { Aktivitaet, Filter } from '../typen/ansicht.ts';
+import { KAELTESERIE_EISLAUFEN } from './seen.ts';
 
 /** Startwert des Reglers, sobald „alle“ abgewählt wird. */
 export const STANDARD_MINDESTTEMPERATUR = 20;
 
-/** Auswahl für den Eissport-Filter (PLANUNG.md, Abschnitt 5), Standard 14. */
+/** Auswahl für den Eissport-Filter, Standard 14 (ab 14 Tagen gilt Eislaufen als klimatisch möglich). */
 export const KAELTETAGE_AUSWAHL = [7, 14, 21, 28] as const;
-export const STANDARD_KAELTETAGE = 14;
+export const STANDARD_KAELTETAGE = KAELTESERIE_EISLAUFEN;
 
 export const STANDARD_FILTER: Filter = {
   bundesland: 'alle',

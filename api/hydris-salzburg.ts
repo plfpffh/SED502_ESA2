@@ -4,6 +4,9 @@
  *
  * Fehlertoleranz: Ist die Antwort insgesamt unbrauchbar, gibt es einen Fehler.
  * Liefert nur eine einzelne Station keinen gültigen Wert, bekommt sie v = null, die übrigen Seen bleiben sichtbar.
+ *
+ * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
+ * @author   Peter Luckmann
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 

@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Filter } from '../src/typen/ansicht.ts';
-import type { Klimakennzahlen } from '../src/typen/klima.ts';
+import type { AktuelleKaelteserie } from '../src/typen/klima.ts';
 import type { SeeMessung } from '../src/typen/messung.ts';
 import type { See } from '../src/typen/see.ts';
-import { waehleSeen, zuAnsicht } from '../src/utils/seen.ts';
+import { eisEinschaetzung, messstellenMitWert, waehleSeen, zuAnsicht } from '../src/utils/seen.ts';
 
 const attersee: See = {
   id: 'attersee', name: 'Attersee', bundeslaender: ['Oberösterreich'],
@@ -34,8 +34,8 @@ const messungen: SeeMessung[] = [
   { seeId: 'fuschlsee', quelle: 'Hydris Salzburg', messstelle: 'Fuschl am See (Seepegel)', wassertemperatur: 12.6, zeitpunkt },
 ];
 
-function kennzahlen(seeId: string, winter: string, laengsteKaelteserie: number): Klimakennzahlen {
-  return { seeId, winter, frosttage: 0, eistage: 0, laengsteKaelteserie, kaeltesumme: 0, hitzetage: 0 };
+function serie(seeId: string, tage: number): AktuelleKaelteserie {
+  return { seeId, tage, bis: '2026-01-31' };
 }
 
 const baden: Filter = {
@@ -44,8 +44,8 @@ const baden: Filter = {
 };
 const eissport: Filter = { ...baden, aktivitaet: 'eissport', sortierung: 'kaelteserie' };
 
-const namen = (filter: Filter, klima: Klimakennzahlen[] = []): string[] =>
-  waehleSeen(seen, messungen, klima, filter).seen.map((see) => see.id);
+const namen = (filter: Filter, kaelteserien: AktuelleKaelteserie[] = []): string[] =>
+  waehleSeen(seen, messungen, kaelteserien, filter).seen.map((see) => see.id);
 
 test('zuAnsicht zeigt alle Stationen, fehlende Messung mit null', () => {
   const ansicht = zuAnsicht(attersee, messungen);
@@ -55,7 +55,7 @@ test('zuAnsicht zeigt alle Stationen, fehlende Messung mit null', () => {
     { name: 'Unterach (Seepegel)', quelle: 'Hydris Salzburg', temperatur: 13, zeitpunkt },
   ]);
   assert.equal(ansicht.temperatur, 13.5); // nur vorhandene Werte
-  assert.equal(ansicht.laengsteKaelteserie, null);
+  assert.equal(ansicht.kaelteserie, null);
 });
 
 test('gleicher Messstellenname wird über die Quelle unterschieden (Mondsee)', () => {
@@ -84,19 +84,15 @@ test('Baden: Sortierung nach Temperatur, See ohne Wert am Ende, Mindestwert läs
   assert.deepEqual(namen({ ...baden, mindestTemperatur: 13 }), ['attersee', 'almsee']);
 });
 
-test('Eissport: Kälteserie aus dem jüngsten Winter, Filter und Sortierung', () => {
-  const klima = [
-    kennzahlen('attersee', '2024/25', 30),
-    kennzahlen('attersee', '2025/26', 5),
-    kennzahlen('almsee', '2025/26', 21),
-  ];
-  const auswahl = waehleSeen(seen, messungen, klima, eissport);
-  assert.deepEqual(auswahl.seen.map((see) => [see.id, see.laengsteKaelteserie]), [
+test('Eissport: aktuelle Kälteserie, Filter und Sortierung, See ohne Wert am Ende', () => {
+  const kaelteserien = [serie('attersee', 5), serie('almsee', 21)];
+  const auswahl = waehleSeen(seen, messungen, kaelteserien, eissport);
+  assert.deepEqual(auswahl.seen.map((see) => [see.id, see.kaelteserie]), [
     ['almsee', 21],
     ['attersee', 5],
     ['fuschlsee', null],
   ]);
-  assert.deepEqual(namen({ ...eissport, mindestKaeltetage: 14 }, klima), ['almsee', 'fuschlsee']);
+  assert.deepEqual(namen({ ...eissport, mindestKaeltetage: 14 }, kaelteserien), ['almsee', 'fuschlsee']);
 });
 
 test('Eissport filtert nicht nach Wassertemperatur', () => {
@@ -108,4 +104,16 @@ test('Statistik und Gesamtanzahl beziehen sich auf die Auswahl', () => {
   assert.equal(auswahl.gesamtanzahl, 3);
   assert.equal(auswahl.statistik.anzahl, 1);
   assert.equal(auswahl.statistik.waermsterSee?.id, 'fuschlsee');
+});
+
+test('Eis-Einschätzung: ab 14 Tagen am Stück klimatisch möglich, darunter zu mild', () => {
+  assert.equal(eisEinschaetzung(8), 'zu mild für Eislaufen');
+  assert.equal(eisEinschaetzung(13), 'zu mild für Eislaufen');
+  assert.equal(eisEinschaetzung(14), 'Eislaufen klimatisch möglich');
+  assert.equal(eisEinschaetzung(0), 'zu mild für Eislaufen');
+});
+
+test('messstellenMitWert zählt nur Messstellen mit Wert, auch 0 °C', () => {
+  assert.equal(messstellenMitWert(zuAnsicht(attersee, messungen)), 2);
+  assert.equal(messstellenMitWert(zuAnsicht(almsee, messungen)), 0);
 });

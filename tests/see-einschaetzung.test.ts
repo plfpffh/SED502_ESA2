@@ -25,7 +25,8 @@ test('See-Einschätzung: erhält echte 0 °C und übermittelt fehlende Einzelwer
   assert.equal(daten.wassertemperatur.mittelwertVerfuegbarerMessstellen, 0);
   assert.equal(daten.wassertemperatur.messstellen.length, 3);
   assert.equal(daten.wassertemperatur.messstellen[0].temperatur, 0);
-  assert.equal(daten.wassertemperatur.messstellen[0].messzeitpunkt, '2026-11-01T10:00:00Z');
+  // 10:00 UTC ist 11:00 in Wien (Winterzeit), wie auf der Detailseite
+  assert.equal(daten.wassertemperatur.messstellen[0].messzeitpunkt, '01.11.2026, 11:00 (Wiener Zeit)');
   assert.equal(daten.wassertemperatur.messstellen[1].temperatur, null);
   assert.equal(daten.wassertemperatur.messstellen[1].messzeitpunkt, null);
   assert.match(daten.wassertemperatur.messstellen[1].status, /Kein Messwert.*nicht schätzen/);

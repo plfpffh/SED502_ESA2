@@ -1,7 +1,7 @@
 /**
  * KlimaDiagramm.tsx – Frosttage pro abgeschlossenem Winter
  *
- * Das Diagramm erhält die fertigen Kennzahlen.
+ * Erhält die Frosttage pro Winter und ergänzt fehlende Winter ab 1950/51 als Lücke (frosttageVerlauf).
  *
  * @project FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
  * @author Christoph Hauser
@@ -9,19 +9,19 @@
 
 import { useId } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import type { Klimakennzahlen } from '../typen/klima';
+import type { FrosttageWinter } from '../typen/klima';
 import { frosttageVerlauf, letzterAbgeschlossenerWinter } from '../utils/klima';
 
 interface KlimaDiagrammProps {
   seeName: string;
-  kennzahlen: Klimakennzahlen[];
+  frosttage: FrosttageWinter[];
 }
 
-export default function KlimaDiagramm({ seeName, kennzahlen }: KlimaDiagrammProps): React.JSX.Element {
+export default function KlimaDiagramm({ seeName, frosttage }: KlimaDiagrammProps): React.JSX.Element {
   const id = useId();
-  const daten = frosttageVerlauf(kennzahlen, 1950, letzterAbgeschlossenerWinter());
+  const daten = frosttageVerlauf(frosttage, 1950, letzterAbgeschlossenerWinter());
 
-  if (kennzahlen.length === 0) return <p>Für diesen See sind keine Klimadaten verfügbar.</p>;
+  if (frosttage.length === 0) return <p>Für diesen See sind keine Klimadaten verfügbar.</p>;
 
   return (
     <figure className="klimadiagramm" aria-labelledby={`${id}-titel`} aria-describedby={`${id}-hinweis`}>

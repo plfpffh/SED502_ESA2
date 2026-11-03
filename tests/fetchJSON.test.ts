@@ -43,3 +43,12 @@ test('Netzwerkfehler werden unverändert weitergegeben', async (t) => {
   });
   await assert.rejects(fetchJSON('/api/test'), { name: 'TypeError', message: 'Failed to fetch' });
 });
+
+test('Antwort mit Status 200, aber ohne JSON: verständliche Meldung statt roher Parser-Meldung', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => new Response('Unexpected error while processing request', { status: 200 }));
+  await assert.rejects(fetchJSON('/api/test'), (fehler: Error) => {
+    assert.doesNotMatch(fehler.message, /Unexpected|JSON/);
+    assert.match(fehler.message, /keine gültigen Daten/);
+    return true;
+  });
+});

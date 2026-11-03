@@ -21,11 +21,13 @@ export function usePrognose(seen: See[]): ReturnType<UsePrognose> {
   useEffect(() => {
     const controller = new AbortController();
     const laden = async (): Promise<void> => {
+      // StrictMode startet Effekte doppelt: erst nach einem Mikrotask laden, der erste Durchlauf ist dann abgebrochen
       await Promise.resolve();
       if (controller.signal.aborted) return;
       setIsLaden(true);
       setErgebnis({ prognosen: [], fehler: null });
       try {
+        // zaehler > 0: nach neuLaden den Zwischenspeicher umgehen
         const daten = await ladePrognosen(seen, controller.signal, zaehler > 0);
         if (!controller.signal.aborted) setErgebnis(daten);
       } catch (fehler) {

@@ -1,7 +1,8 @@
 /**
  * SeenFilter.tsx – kontrolliertes Filterformular der Seenliste (Kompendium Modul 04, Abschnitt 6)
  *
- * Der Filter liegt als State in der Seite, das Formular zeigt ihn an und meldet jede Änderung über onAendern.
+ * Der Filter liegt im SeenFilterContext (bleibt beim Seitenwechsel erhalten), das Formular zeigt ihn an und meldet
+ * jede Änderung über onAendern.
  *
  * @project  FERNFH SED502 Frontend Development WS 2026/27 ESA 2: Seen im Klimawandel
  * @author   Peter Luckmann
